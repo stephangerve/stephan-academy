@@ -7,13 +7,14 @@ from PyQt5 import QtCore
 from PyQt5.QtCore import QTimer
 from PyQt5.QtMultimedia import QSound, QSoundEffect
 from PyQt5.QtWidgets import QPushButton, QLabel, QHBoxLayout, QWidget, QGraphicsOpacityEffect
-from PyQt5.QtGui import QFont, QPixmap
+from PyQt5.QtGui import QFont, QPixmap, QCursor
 from PyQt5.QtCore import pyqtSlot, QUrl
 from multiprocessing import Process
 import io
 import os
 import time
 import datetime
+import Config
 from datetime import date, timedelta
 
 drive_letter = "C:"
@@ -27,7 +28,6 @@ sound_next_path = os.path.join(learning_system_dir, "sounds", "next edited 2 - U
 class ExercisePage(Page):
     ui = None
     exercises = None
-    exercise_stats = None
     current_exercise = None
     current_exercise_number = None
     MAX_TIME = 480 #420
@@ -36,19 +36,12 @@ class ExercisePage(Page):
 
 
     def __init__(self, ui):
-        Page.__init__(self, "Exercices Page", 3)
+        Page.__init__(self, Config.ExercisePage_page_number)
         self.ui = ui
         self.initUI()
 
 
     def initUI(self):
-        self.background_colors = {
-            "A": "rgb(147, 235, 52)",
-            "B": "rgb(217, 235, 52)",
-            "C": "rgb(235, 171, 52)",
-            "D": "rgb(235, 92, 52)",
-            "F": "rgb(235, 52, 52)",
-        }
         self.ui.next_exercise_button.clicked.connect(lambda state, grade=None: self.processGrade(grade, "Next"))
         self.ui.prev_exercise_button.clicked.connect(lambda state, grade=None: self.processGrade(grade, "Prev"))
         self.sound_warning = QSoundEffect()
@@ -62,17 +55,19 @@ class ExercisePage(Page):
         self.exercise_timer = QTimer()
         self.timer_counter = None
 
-    def objectReferences(self, db_interface, learning_page):
+    def objectReferences(self, db_interface, learning_page, add_to_study_list_page, study_list_page):
         self.db_interface = db_interface
         self.learning_page = learning_page
+        self.add_to_study_list_page = add_to_study_list_page
+        self.study_list_page = study_list_page
 
-    def showPage(self, num, exercises, exercise_stats):
+    def showPage(self, num, exercises):
         self.current_exercise_number = num
         self.exercises = exercises
-        #self.exercise_stats = self.db_interface.fetchEntries("ExerciseStats", [self.exercises[0]["ID"], self.exercises[0]["ChapterNumber"], self.exercises[0]["SectionNumber"]])
-        self.exercise_stats = exercise_stats
-        self.exercises_stats_columns = self.db_interface.fetchColumnNames("ExerciseStats", [self.exercises[0]["ID"], self.exercises[0]["ChapterNumber"], self.exercises[0]["SectionNumber"]])
+        self.clearNotificationLayout()
+        self.ui.timer_ticker.setStyleSheet("color: white;\nfont: 12pt;")
         self.ui.exit_practice_button.clicked.connect(lambda: self.exitPractice())
+        self.last_page_number = self.ui.content_pages.currentIndex()
         self.ui.content_pages.setCurrentIndex(self.page_number)
         self.startExercise()
 
@@ -92,11 +87,37 @@ class ExercisePage(Page):
                 self.hide_timer.disconnect()
         except:
             pass
-        self.learning_page.selected_exercises_stats = self.exercise_stats
-        self.learning_page.setExercisesButtons(self.exercises, self.learning_page.selected_exercises_stats)
-        self.learning_page.prev_selected_exercise_num = None
-        self.learning_page.prev_selected_exercise_bgcolor = None
-        self.ui.content_pages.setCurrentIndex(self.learning_page.page_number)
+        if self.last_page_number == self.learning_page.page_number:
+            self.learning_page.selected_exercises = self.exercises
+            self.learning_page.setExercisesButtons()
+            self.learning_page.updateSectionList()
+            for i in range(self.ui.sections_listwidget.count()):
+                chap_num = self.learning_page.textbook_sections[i]["ChapterNumber"]
+                sect_num = self.learning_page.textbook_sections[i]["SectionNumber"]
+                exercises = [entry for entry in self.learning_page.textbook_exercises if entry["ChapterNumber"] == chap_num and entry["SectionNumber"] == sect_num]
+                num = int(exercises[0]["ExerciseID"].split(".")[-1])
+                self.ui.sections_listwidget.itemWidget(self.ui.sections_listwidget.item(i)).children()[5].clicked.connect(lambda state, num=num, exercises=exercises: self.showPage(num, exercises))
+                self.ui.sections_listwidget.itemWidget(self.ui.sections_listwidget.item(i)).children()[7].clicked.connect(lambda state, exercises_to_be_added=exercises: self.add_to_study_list_page.showPage(exercises_to_be_added))
+            self.learning_page.prev_selected_exercise_num = None
+            self.learning_page.prev_selected_exercise_bgcolor = None
+        elif self.last_page_number == self.study_list_page.page_number:
+            self.study_list_page.selected_exercises = self.exercises
+            if self.study_list_page.selected_chap_sect is not None:
+                self.study_list_page.setExercisesButtons()
+            self.study_list_page.updateSLSectionList()
+            for i in range(self.ui.sl_sections_listwidget.count()):
+                chap_sect_num = ".".join([self.study_list_page.selected_sl_chap_sects[i][1], self.study_list_page.selected_sl_chap_sects[i][2]])
+                exercises = self.study_list_page.all_sl_exercises_dict[self.study_list_page.selected_tag][self.study_list_page.selected_sl_chap_sects[i][0]][chap_sect_num]
+                num = int(exercises[0]["ExerciseID"].split(".")[-1])
+                self.ui.sl_sections_listwidget.itemWidget(self.ui.sl_sections_listwidget.item(i)).children()[-1].clicked.connect(lambda state, num=num, exercises=exercises: self.showPage(num, exercises))
+            self.study_list_page.prev_selected_exercise_num = None
+            self.study_list_page.prev_selected_exercise_bgcolor = None
+        self.ui.content_pages.setCurrentIndex(self.last_page_number)
+        return
+
+    def clearNotificationLayout(self):
+        for i in reversed(range(self.ui.popup_note_layout.count())):
+            self.ui.popup_note_layout.itemAt(i).widget().setParent(None)
 
     def showNotification(self, notif_str):
         try:
@@ -106,8 +127,7 @@ class ExercisePage(Page):
                 self.hide_timer.disconnect()
         except:
             pass
-        for i in reversed(range(self.ui.popup_note_layout.count())):
-            self.ui.popup_note_layout.itemAt(i).widget().setParent(None)
+        self.clearNotificationLayout()
         self.opacity_effect = QGraphicsOpacityEffect()
         self.popup_label = QLabel(notif_str)
         self.popup_label.setAlignment(QtCore.Qt.AlignCenter)
@@ -144,7 +164,7 @@ class ExercisePage(Page):
             self.sound_warning.play()
             self.showNotification("Two Minutes Left!")
         if self.timer_counter <= self.WARNING_TIME:
-            self.ui.timer_ticker.setStyleSheet("color: red")
+            self.ui.timer_ticker.setStyleSheet("color: red;\nfont: 12pt;")
         if 0 < self.timer_counter < 10:
             self.sound_tick.play()
         if self.timer_counter == 0:
@@ -185,46 +205,41 @@ class ExercisePage(Page):
         self.ui.solution_pic_label.setPixmap(solution_image_pixmap)
         self.ui.solution_pic_label.resize(solution_image_pixmap.width(), solution_image_pixmap.height())
         self.ui.grade_hboxlayout.itemAt(0).widget().setParent(None)
-        for grade in self.background_colors.keys():
+        for grade in Config.EXERCISE_GRADE_COLORS.keys():
             button = QPushButton(grade)
-            button.setStyleSheet("background-color : " + self.background_colors[grade])
+            button.setStyleSheet("background-color : rgb" + str(Config.EXERCISE_GRADE_COLORS[grade]))
             button.clicked.connect(lambda state, grade=button.text(): self.processGrade(grade, "Next"))
             self.ui.grade_hboxlayout.addWidget(button)
 
 
     def processGrade(self, grade, direction, desired_next_num=None):
-        current_exercise_stat = []
-        matched_entries = [self.exercise_stats.pop(self.exercise_stats.index(entry)) for entry in self.exercise_stats if self.current_exercise["ExerciseID"] == entry["ExerciseID"]]
-        if len(matched_entries) > 0:
-            current_exercise_stat = matched_entries[0]
-        if len(current_exercise_stat) == 0:
-            current_exercise_stat = dict(
-                zip(self.exercises_stats_columns,
-                    [
-                        self.current_exercise["ID"],
-                        self.current_exercise["ExerciseID"],
-                        0,
-                        None,
-                        None,
-                        None,
-                        None,
-                        None,
-                    ]
-                )
-            )
+        popped_index = [i for i in range(len(self.exercises)) if self.current_exercise["ExerciseID"] == self.exercises[i]["ExerciseID"]][0]
+        exercise_being_processed = self.exercises.pop(popped_index)
+        exercise_being_processed["Seen"] = 'True'
         if grade is not None:
-            current_exercise_stat["Attempts"] += 1
-            current_exercise_stat["LastAttempted"] = date.today().strftime("%m/%d/%Y")
-            current_exercise_stat["LastAttemptTime"] = datetime.datetime.now().strftime("%H:%M")
-            current_exercise_stat["Grade"] = grade
+            exercise_being_processed["Attempts"] += 1
+            exercise_being_processed["LastAttempted"] = date.today().strftime("%m/%d/%Y")
+            exercise_being_processed["LastAttemptTime"] = datetime.datetime.now().strftime("%H:%M")
+            exercise_being_processed["Grade"] = grade
             old_avg_time = 0
-            if int(current_exercise_stat["Attempts"]) - 1 >= 1:
-                if current_exercise_stat["AverageTime"] is not None:
-                    old_avg_time = float(current_exercise_stat["AverageTime"])
+            if int(exercise_being_processed["Attempts"]) - 1 >= 1:
+                if exercise_being_processed["AverageTime"] is not None:
+                    old_avg_time = float(exercise_being_processed["AverageTime"])
                 else:
                     old_avg_time = 0
-            current_exercise_stat["AverageTime"] = (((self.MAX_TIME - self.timer_counter)/60) + old_avg_time * (int(current_exercise_stat["Attempts"]) - 1)) / int(current_exercise_stat["Attempts"]) #derivation of formula in notepad on desk
-        self.exercise_stats.append(current_exercise_stat)
+            exercise_being_processed["AverageTime"] = (((self.MAX_TIME - self.timer_counter)/60) + old_avg_time * (int(exercise_being_processed["Attempts"]) - 1)) / int(exercise_being_processed["Attempts"]) #derivation of formula in notepad on desk
+        self.exercises.insert(popped_index, exercise_being_processed)
+        if exercise_being_processed["AverageTime"] == '':
+            exercise_being_processed["AverageTime"] = 0.0
+        update_params = [exercise_being_processed["Seen"],
+                         exercise_being_processed["Attempts"],
+                         exercise_being_processed["LastAttempted"],
+                         exercise_being_processed["LastAttemptTime"],
+                         exercise_being_processed["Grade"],
+                         exercise_being_processed["AverageTime"],
+                         exercise_being_processed["TextbookID"],
+                         exercise_being_processed["ExerciseID"]]
+        self.db_interface.updateEntry("Exercise", update_params)
         self.showNotification("Attempt saved")
         if direction == "Next":
             self.current_exercise_number = self.current_exercise_number + 1
@@ -235,9 +250,9 @@ class ExercisePage(Page):
                 else:
                     self.current_exercise_number = self.current_exercise_number + 1
                     if self.current_exercise_number > int(self.exercises[-1]["ExerciseID"].split(".")[-1]):
-                        self.ui.content_pages.setCurrentIndex(self.learning_page.page_number)
+                        self.exitPractice()
             if self.current_exercise_number > int(self.exercises[-1]["ExerciseID"].split(".")[-1]):
-                self.ui.content_pages.setCurrentIndex(self.learning_page.page_number)
+                self.exitPractice()
             else:
                 self.startExercise()
         elif direction == "Prev":
@@ -249,9 +264,9 @@ class ExercisePage(Page):
                 else:
                     self.current_exercise_number = self.current_exercise_number - 1
                     if self.current_exercise_number < int(self.exercises[0]["ExerciseID"].split(".")[-1]):
-                        self.ui.content_pages.setCurrentIndex(self.learning_page.page_number)
+                        self.exitPractice()
             if self.current_exercise_number < int(self.exercises[0]["ExerciseID"].split(".")[-1]):
-                self.ui.content_pages.setCurrentIndex(self.learning_page.page_number)
+                self.exitPractice()
             else:
                 self.startExercise()
         elif direction == "Cond3":
@@ -270,7 +285,6 @@ class ExercisePage(Page):
         self.clearExercisesGrid()
         count = len(self.exercises)
         if count > 0:
-            exercise_stats_ids = [entry["ExerciseID"] for entry in self.exercise_stats]
             if count % 10 == 0:
                 rows = int(count / 10)
             else:
@@ -286,21 +300,27 @@ class ExercisePage(Page):
                     index = i * 10 + j
                     ex_num = int(self.exercises[index]["ExerciseID"].split(".")[-1])
                     button = QPushButton(str(ex_num))
+                    button.setCursor(QCursor(QtCore.Qt.PointingHandCursor))
                     button.setCheckable(True)
-                    if self.db_interface.fetchBool("SolutionExist", [self.exercises[index]["ID"], self.exercises[index]["ExerciseID"]]) is True:
-                        if self.exercises[index]["ExerciseID"] == self.current_exercise["ExerciseID"]:
-                            color = "lightblue"
+                    if self.exercises[index]["SolutionExists"] is not None:
+                        if eval(self.exercises[index]["SolutionExists"]):
+                            if self.exercises[index]["ExerciseID"] == self.current_exercise["ExerciseID"]:
+                                color = "lightblue"
+                                button.toggle()
+                                button.setEnabled(False)
+                            elif eval(self.exercises[index]["Seen"]):
+                                grade = [entry["Grade"] for entry in self.exercises if self.exercises[index]["ExerciseID"] == entry["ExerciseID"]][0]
+                                if grade in Config.EXERCISE_GRADE_COLORS.keys():
+                                    color = "rgb" + str(Config.EXERCISE_GRADE_COLORS[grade])
+                                else:
+                                    color = "gray"
+                            else:
+                                color = "white"
+                            button.clicked.connect(lambda state, next_num=int(button.text()): self.processGrade(None, "Cond3", desired_next_num=next_num))
+                        else:
+                            color = "lightgray"
                             button.toggle()
                             button.setEnabled(False)
-                        elif self.exercises[index]["ExerciseID"] in exercise_stats_ids:
-                            grade = [entry["Grade"] for entry in self.exercise_stats if self.exercises[index]["ExerciseID"] == entry["ExerciseID"]][0]
-                            if grade in self.background_colors.keys():
-                                color = self.background_colors[grade]
-                            else:
-                                color = "gray"
-                        else:
-                            color = "white"
-                        button.clicked.connect(lambda state, next_num=int(button.text()): self.processGrade(None, "Cond3", desired_next_num=next_num))
                     else:
                         color = "lightgray"
                         button.toggle()

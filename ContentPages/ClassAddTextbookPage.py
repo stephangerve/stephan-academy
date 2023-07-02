@@ -5,7 +5,7 @@ from UIElements import ButtonElement
 from UIElements import ListElement
 from PyQt5 import QtCore
 from PyQt5.QtWidgets import QPushButton, QLabel, QHBoxLayout, QWidget, QFileDialog, QSpinBox, QTableWidgetItem, QLineEdit, QHeaderView
-from PyQt5.QtGui import QFont, QPixmap, QColor
+from PyQt5.QtGui import QFont, QPixmap, QColor, QCursor
 import io
 import os
 import Config
@@ -24,7 +24,7 @@ class AddTextbookPage(Page):
 
 
     def __init__(self, ui):
-        Page.__init__(self, "Add Textbook Page", 4)
+        Page.__init__(self, Config.AddTextbookPage_page_number)
         self.ui = ui
         self.initUI()
 
@@ -32,14 +32,14 @@ class AddTextbookPage(Page):
     def initUI(self):
         pass
 
-    def objectReferences(self, db_interface, learning_page):
+    def objectReferences(self, db_interface, learning_page, categories):
         self.db_interface = db_interface
         self.learning_page = learning_page
-        self.categories = self.db_interface.fetchEntries("Categories", [])
+        self.categories = categories
 
     def showPage(self, cat_str):
         cat_list = [""]
-        cat_list += [entry["ID"] for entry in self.categories]
+        cat_list += [entry["Category"] for entry in self.categories]
         self.ui.category_combo_box.addItems(cat_list)
         self.ui.category_combo_box.setCurrentText(cat_str)
         self.ui.num_sections_table.setColumnCount(1)
@@ -53,7 +53,6 @@ class AddTextbookPage(Page):
         self.ui.clear_button.clicked.connect(lambda: self.clearFields())
         self.ui.exit_add_textbook_page_button.clicked.connect(lambda: self.ui.content_pages.setCurrentIndex(self.learning_page.page_number))
         self.ui.content_pages.setCurrentIndex(self.page_number)
-
 
     def insertChaptersRowsInTable(self):
         if self.ui.sections_check_box.isChecked():
@@ -108,7 +107,7 @@ class AddTextbookPage(Page):
         for row in sections_list:
             add_row = (textbookid, row[0], row[1], None, None, str(False), str(False), None, None, None)
             if not self.db_interface.fetchBool("Section Exist", add_row):
-                self.db_interface.insertEntry("Section", [add_row])
+                self.db_interface.insertEntry("Section", add_row)
                 self.ui.console_text_edit.append(">> Added section to database: " + str(add_row))
             else:
                 self.ui.console_text_edit.append(">> Row exists in database: " + str(add_row))
@@ -140,7 +139,7 @@ class AddTextbookPage(Page):
                 add_row.append(self.ui.num_chapters_spin_box.value())
                 add_row.append(None)
                 add_row.append(None)
-                self.db_interface.insertEntry("Textbooks", [add_row])
+                self.db_interface.insertEntry("Textbooks", add_row)
                 self.ui.console_text_edit.append(">> Added new textbook to database:")
                 self.ui.console_text_edit.append(">> Category: " + self.ui.category_combo_box.currentText())
                 self.ui.console_text_edit.append(">> Author: " + self.ui.author_line_edit.text())
