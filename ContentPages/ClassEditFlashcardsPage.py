@@ -1,6 +1,6 @@
 import ElementStyles
 from ContentPages.ClassPage import Page
-from UIElements import ListElement
+from CustomWidgets.ClassListWidget import ListWidget
 from PyQt5 import QtCore, Qt
 from PyQt5.QtWidgets import QFrame, QPushButton, QHBoxLayout, QFileDialog, QLabel, QVBoxLayout, QWidget
 from PyQt5.QtGui import QFont, QCursor, QPixmap, QImage
@@ -32,7 +32,7 @@ class EditFlashcardsPage(Page):
         self.MAX_COLS = 4
         self.prev_selected_imported_flashcard_widget = None
         self.prev_selected_set_flashcard_widget = None
-        self.set_flashcard_list_elem = ListElement(self.ui.set_flashcards_listwidget)
+        self.set_flashcard_list_elem = ListWidget(self.ui.set_flashcards_listwidget)
         ElementStyles.regularShadow(self.ui.update_card_frame)
         ElementStyles.regularShadow(self.ui.delete_card_frame)
 

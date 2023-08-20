@@ -20,6 +20,7 @@ class ImageExtractor:
     def __init__(self, ui, extracted_image_arrays):
         self.ui = ui
         self.extracted_image_arrays = extracted_image_arrays
+        self.IMAGE_TYPE = None
         self.x_cursor, self.y_cursor = 0, 0
         self.x_start, self.y_start, self.x_end, self.y_end = 0, 0, 0, 0
         self.label_x_start, self.label_y_start, self.label_x_end, self.label_y_end = 0, 0, 0, 0
@@ -88,7 +89,7 @@ class ImageExtractor:
             self.sct_img = sct.grab(monitor)
         return np.array(self.sct_img)
 
-    def annotateOneColumn(self, command, current_set, IMAGE_TYPE, ret_current_index_number):
+    def annotateOneColumn(self, command, current_set, ret_current_index_number, IMAGE_TYPE):
         self.IMAGE_TYPE = IMAGE_TYPE
         self.index_number = ret_current_index_number() + self.ui.default_idx_inc_spinbox.value()
         if command not in Config.STANDARD_OPs:
@@ -118,7 +119,11 @@ class ImageExtractor:
             self.annotations = {}
             while True:
                 self.column_position = None
-                condition = self.drawBBoxes()
+                try: #remove exception handler later
+                    condition = self.drawBBoxes()
+                except:
+                    print("Error occurred during boundary placement.")
+                    condition = False
                 if condition:
                     condition = self.delayToInspect()
                     if condition:
@@ -130,7 +135,7 @@ class ImageExtractor:
         cv2.destroyAllWindows()
         return
 
-    def annotateTwoColumns(self, command, current_set, IMAGE_TYPE, ret_current_index_number):
+    def annotateTwoColumns(self, command, current_set, ret_current_index_number, IMAGE_TYPE):
         self.IMAGE_TYPE = IMAGE_TYPE
         self.index_number = ret_current_index_number() + self.ui.default_idx_inc_spinbox.value()
         if command not in Config.STANDARD_OPs:
@@ -381,39 +386,39 @@ class ImageExtractor:
                     if self.annotate_mode == Config.OP_APP_TO_LAST:
                         self.index_number += self.ui.default_idx_inc_spinbox.value()
                     self.annotate_mode = Config.OP_GRID_MODE
-            elif keyboard.is_pressed('ctrl+shift+alt+8'):
-                while keyboard.is_pressed('ctrl+shift+alt+8'):
-                    continue
-                code = self.generateCode()
-                self.bboxes[code] = [(self.x_start, self.y_end), (self.x_end, self.y_end)]
-                self.addAnnotation(code=code, shape=Config.SHAPE_LINE, operation=8, column_pos=self.column_position, index=None)
-                cv2.imshow("image", self.image_w_bboxes)
-                cv2.waitKey(1)
-                self.x_start, self.y_start, self.x_end, self.y_end = 0, 0, 0, 0
-                self.label_x_start, self.label_y_start, self.label_x_end, self.label_y_end = 0, 0, 0, 0
-            elif keyboard.is_pressed('ctrl+shift+alt+9'):
-                while keyboard.is_pressed('ctrl+shift+alt+9'):
-                    continue
-                if len(self.bboxes) > 0:
-                    minimum = 0
-                    for key in reversed(self.annotations):
-                        if self.annotations[key]["index"] is not None:
-                            minimum = self.annotations[key]["index"]
-                    if self.index_number - 1 > minimum:
-                        self.index_number -= self.ui.default_idx_inc_spinbox.value()
-            elif keyboard.is_pressed('ctrl+shift+alt+0'):
-                while keyboard.is_pressed('ctrl+shift+alt+0'):
+            elif keyboard.is_pressed(Config.OP_INC_INDEX):
+                while keyboard.is_pressed(Config.OP_INC_INDEX):
                     continue
                 self.index_number += self.ui.default_idx_inc_spinbox.value()
-            elif keyboard.is_pressed('ctrl+shift+alt+x'):
-                while keyboard.is_pressed('ctrl+shift+alt+x'):
-                    continue
-                if self.scan_mode:
-                    self.scan_mode = False
-                    cv2.setMouseCallback("image", self.setBBOXCoordiates)
-                else:
-                    self.scan_mode = True
-                    cv2.setMouseCallback("image", self.scanAndSetBBOXCoordiates)
+            # elif keyboard.is_pressed('ctrl+shift+alt+8'):
+            #     while keyboard.is_pressed('ctrl+shift+alt+8'):
+            #         continue
+            #     code = self.generateCode()
+            #     self.bboxes[code] = [(self.x_start, self.y_end), (self.x_end, self.y_end)]
+            #     self.addAnnotation(code=code, shape=Config.SHAPE_LINE, operation=8, column_pos=self.column_position, index=None)
+            #     cv2.imshow("image", self.image_w_bboxes)
+            #     cv2.waitKey(1)
+            #     self.x_start, self.y_start, self.x_end, self.y_end = 0, 0, 0, 0
+            #     self.label_x_start, self.label_y_start, self.label_x_end, self.label_y_end = 0, 0, 0, 0
+            # elif keyboard.is_pressed('ctrl+shift+alt+9'):
+            #     while keyboard.is_pressed('ctrl+shift+alt+9'):
+            #         continue
+            #     if len(self.bboxes) > 0:
+            #         minimum = 0
+            #         for key in reversed(self.annotations):
+            #             if self.annotations[key]["index"] is not None:
+            #                 minimum = self.annotations[key]["index"]
+            #         if self.index_number - 1 > minimum:
+            #             self.index_number -= self.ui.default_idx_inc_spinbox.value()
+            # elif keyboard.is_pressed('ctrl+shift+alt+x'):
+            #     while keyboard.is_pressed('ctrl+shift+alt+x'):
+            #         continue
+            #     if self.scan_mode:
+            #         self.scan_mode = False
+            #         cv2.setMouseCallback("image", self.setBBOXCoordiates)
+            #     else:
+            #         self.scan_mode = True
+            #         cv2.setMouseCallback("image", self.scanAndSetBBOXCoordiates)
             elif keyboard.is_pressed('esc') or self.annotate_mode is Config.OP_CANCEL:
                 while keyboard.is_pressed('esc'):
                     continue
@@ -615,7 +620,7 @@ class ImageExtractor:
             cv2.waitKey(1)
 
         # 3. Set row dividing lines
-        idx_increment = len(self.grid_col_bboxes) + self.ui.default_idx_inc_spinbox.value()
+        idx_increment = len(self.grid_col_bboxes) + self.ui.default_idx_inc_spinbox.value() - 1
         last_grid_index_numbers = []
         for grid_col_bbox, mask_reg_col_line, i in zip(self.grid_col_bboxes, mask_reg_col_lines, [i for i in range(len(self.grid_col_bboxes))]):
             self.mask_reg_col_line = mask_reg_col_line
@@ -1501,7 +1506,8 @@ class ImageExtractor:
                         self.index_number = self.annotations.pop(key)["index"]
                     else:
                         annotation = self.annotations.pop(list(self.annotations.keys())[-1])
-                        self.index_number = annotation["index"]
+                        if annotation["index"] is not None:
+                            self.index_number = annotation["index"]
                         self.bboxes.pop(list(self.bboxes.keys())[-1])
                         break
             else:

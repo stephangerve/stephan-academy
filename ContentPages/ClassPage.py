@@ -1,5 +1,5 @@
 from abc import abstractmethod
-from PyQt5.QtWidgets import QWidget, QPushButton, QListWidget
+from PyQt5.QtWidgets import QWidget, QPushButton, QListWidget, QCheckBox
 
 class Page(QWidget):
     __page_name = None
@@ -26,6 +26,9 @@ class Page(QWidget):
     def showPage(self):
         raise NotImplementedError("Method must be implemented: \"deactivate\"")
 
+    def exitPage(self):
+        pass
+
     # @property
     # def page_name(self):
     #     return self.__page_name
@@ -51,6 +54,11 @@ class Page(QWidget):
         elif type(widget) == QListWidget:
             try:
                 widget.itemClicked.disconnect()
+            except:
+                pass
+        elif type(widget) == QCheckBox:
+            try:
+                widget.stateChanged.disconnect()
             except:
                 pass
 

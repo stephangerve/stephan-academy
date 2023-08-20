@@ -1,9 +1,10 @@
 from ClassImageExtractor import ImageExtractor
 from ContentPages.ClassPage import Page
-from UIElements import ListElement
+from CustomWidgets.ClassListWidget import ListWidget
 from PyQt5.QtGui import QPixmap, QKeyEvent, QKeySequence, QCursor, QMouseEvent, QImage
 from PyQt5.QtWidgets import QShortcut, QAction, QWidget, QGridLayout, QLabel, QVBoxLayout, QPushButton, QAbstractButton, QHBoxLayout, QFrame
 from PyQt5.QtCore import QEvent, Qt, QTimer, QSize
+from PyQt5 import QtCore
 import ElementStyles
 import os
 import Config
@@ -28,10 +29,10 @@ class AddExercisesPage(Page, QWidget):
     def __init__(self, ui):
         Page.__init__(self, Config.AddExercisesPage_page_number)
         self.ui = ui
-        self.add_exercises_sections_list_elem = ListElement(self.ui.add_exercises_sections_listwidget)
-        self.saved_images_list_elem = ListElement(self.ui.saved_images_listwidget)
+        self.add_exercises_sections_list_elem = ListWidget(self.ui.add_exercises_sections_listwidget)
+        self.saved_images_list_elem = ListWidget(self.ui.saved_images_listwidget)
         #self.extracted_image_list_elem = ListElement(self.ui.extracted_images_listwidget)
-        self.ui.default_starting_index_spinbox.setValue(-1)
+        self.ui.default_starting_index_spinbox.setValue(1)
         self.ui.default_idx_inc_spinbox.setValue(1)
         self.ui.bbox_scan_radius_spinbox.setValue(Config.DEFAULT_SCAN_RADIUS_BBOX)
         self.ui.mask_scan_radius_spinbox.setValue(Config.DEFAULT_SCAN_RADIUS_MASK)
@@ -46,9 +47,11 @@ class AddExercisesPage(Page, QWidget):
         self.prev_selected_extracted_image_widget = None
         self.prev_selected_section_widget = None
         self.extracted_image_arrays = {}
+        self.IMAGE_TYPE = "Exercises"
         self.button_m = None
         self.button_u = None
         self.last_chap_num = None
+        self.current_set_index = None
 
     def objectReferences(self, db_interface, learning_page):
         self.db_interface = db_interface
@@ -58,6 +61,7 @@ class AddExercisesPage(Page, QWidget):
         # ElementStyles.regularShadow(self.ui.ch_sect_header_label)
         # ElementStyles.regularShadow(self.ui.textbook_info_header_label)
         # ElementStyles.regularShadow(self.ui.saved_images_header_label)
+        self.current_set_index = None
         self.ui.saved_images_listwidget.clear()
         self.ui.png_label.clear()
         self.clearExerciseImageButtonsLayout()
@@ -79,6 +83,7 @@ class AddExercisesPage(Page, QWidget):
         self.changeMode(0)
         self.ui.extract_exercises_button.clicked.connect(lambda: self.changeMode(0))
         self.ui.extract_solutions_button.clicked.connect(lambda: self.changeMode(1))
+        self.ui.delete_button.clicked.connect(lambda: self.deleteImageEntry())
         if self.selected_edition != "1st":
             self.e_packs_txtbk_dir = os.path.join(Config.E_PACKS_DIR, self.selected_category, " - ".join([self.selected_author, self.selected_textbook_title, self.selected_edition]))
             self.txtbk_dir = os.path.join(Config.MAIN_DIR, self.selected_category, " - ".join([self.selected_author, self.selected_textbook_title, self.selected_edition]), "Textbook")
@@ -122,6 +127,8 @@ class AddExercisesPage(Page, QWidget):
         self.ui.category_header_label.setText(selected_category)
         self.ui.textbook_header_label.setText(" - ".join([selected_author, selected_textbook_title, selected_edition]))
         self.ui.exit_add_ex_page_button.clicked.connect(lambda: self.exitPage())
+        self.extracted_image_arrays.clear()
+        self.images_in_grid.clear()
         self.ui.content_pages.setCurrentIndex(self.page_number)
 
 
@@ -146,6 +153,8 @@ class AddExercisesPage(Page, QWidget):
             if self.ui.extract_exercises_button.isChecked():
                 self.ui.extract_exercises_button.toggle()
                 self.ui.extract_exercises_button.setEnabled(True)
+        if self.current_set_index is not None:
+            self.sectionsEntryClicked(self.current_set_index)
 
     def extractedImageWidget(self, image_index, image_array):
         widget_width = 200
@@ -160,8 +169,6 @@ class AddExercisesPage(Page, QWidget):
             pic_u_label = QLabel()
             pic_u_label.setAlignment(Qt.AlignCenter)
             pic_u_label.setPixmap(qpixmap_u)
-            pic_u_label.setWindowFlags(Qt.FramelessWindowHint)
-            pic_u_label.setAttribute(Qt.WA_TranslucentBackground)
             ElementStyles.lightShadow(pic_u_label)
 
             np_image_array_m = np.array(image_array["masked"])
@@ -173,8 +180,6 @@ class AddExercisesPage(Page, QWidget):
             pic_m_label = QLabel()
             pic_m_label.setAlignment(Qt.AlignCenter)
             pic_m_label.setPixmap(qpixmap_m)
-            pic_m_label.setWindowFlags(Qt.FramelessWindowHint)
-            pic_m_label.setAttribute(Qt.WA_TranslucentBackground)
             ElementStyles.lightShadow(pic_m_label)
 
             hlayout = QHBoxLayout()
@@ -183,8 +188,6 @@ class AddExercisesPage(Page, QWidget):
             hlayout.addWidget(pic_m_label)
 
             frame = QFrame()
-            frame.setWindowFlags(Qt.FramelessWindowHint)
-            frame.setAttribute(Qt.WA_TranslucentBackground)
             frame.setLayout(hlayout)
             im_widget = frame
         else:
@@ -198,31 +201,38 @@ class AddExercisesPage(Page, QWidget):
             pic_label = QLabel()
             pic_label.setPixmap(qpixmap)
             pic_label.setAlignment(Qt.AlignCenter)
-            pic_label.setWindowFlags(Qt.FramelessWindowHint)
-            pic_label.setAttribute(Qt.WA_TranslucentBackground)
             ElementStyles.lightShadow(pic_label)
             im_widget = pic_label
+
+        fn_label = QLabel(self.IMAGE_TYPE[:-1] + " " + str(image_index))
+        fn_label.setFixedSize(widget_width, 20)
+        fn_label.setAlignment(Qt.AlignCenter)
 
         layout = QVBoxLayout()
         layout.setContentsMargins(5, 5, 5, 5)
         layout.addWidget(im_widget)
-        fn_label = QLabel(self.IMAGE_TYPE[:-1] + " " + str(image_index))
-        fn_label.setFixedSize(widget_width, 20)
-        fn_label.setAlignment(Qt.AlignCenter)
-        fn_label.setWindowFlags(Qt.FramelessWindowHint)
-        fn_label.setAttribute(Qt.WA_TranslucentBackground)
         layout.addWidget(fn_label)
         widget = QWidget()
+        close_button = QPushButton("X")
         #widget = QPushButton()
         #widget.setFlat(True)
-        widget.setWindowFlags(Qt.FramelessWindowHint)
+        #widget.setWindowFlags(Qt.FramelessWindowHint)
         #widget.setAttribute(Qt.WA_TranslucentBackground)
         widget.setCursor(QCursor(Qt.PointingHandCursor))
         widget.setLayout(layout)
         widget.setStyleSheet("background-color: #ffffff")
         ElementStyles.hoverEffect(widget)
         widget.setFixedSize(widget_width, widget_height)
+        self.setTranlucentAndFrameless(widget)
         return widget
+
+    def setTranlucentAndFrameless(self, widget):
+        children = widget.children()
+        if children is not None and len(children) > 0:
+            for i in range(1, len(children)):
+                children[i].setWindowFlags(QtCore.Qt.FramelessWindowHint)
+                children[i].setAttribute(QtCore.Qt.WA_TranslucentBackground)
+                self.setTranlucentAndFrameless(children[i])
 
     def updateExtractedImagesGrid(self):
         count = len(self.extracted_image_arrays)
@@ -232,13 +242,10 @@ class AddExercisesPage(Page, QWidget):
             for idx in self.extracted_image_arrays.keys():
                 if idx not in list(self.images_in_grid.keys()):
                     self.images_in_grid[idx] = self.extracted_image_arrays[idx]
-            # if self.IMAGE_TYPE == "Exercises":
-            #     count *= 2
             if count % MAX_COLS == 0:
                 rows = int(count / MAX_COLS)
             else:
                 rows = int(count / MAX_COLS) + 1
-            #index = 0
             for i in range(self.last_grid_row_idx, rows):
                 self.last_grid_row_idx = i
                 if int(count / ((i + 1) * MAX_COLS)) > 0:
@@ -250,19 +257,9 @@ class AddExercisesPage(Page, QWidget):
                 for j in range(self.grid_col_start_idx, columns):
                     index = i * MAX_COLS + j
                     self.grid_col_start_idx = j
-                    # if self.IMAGE_TYPE == "Exercises":
-                    #     if index % 2 == 0:
-                    #         widget_u = self.extractedImageWidget(list(self.images_in_grid.keys())[int(np.floor(index/2))], list(self.images_in_grid.values())[int(np.floor(index/2))]["unmasked"])
-                    #         self.ui.extracted_images_gridlayout.addWidget(widget_u, i, j)
-                    #     else:
-                    #         widget_m = self.extractedImageWidget(list(self.images_in_grid.keys())[int(np.floor(index/2))], list(self.images_in_grid.values())[int(np.floor(index/2))]["masked"])
-                    #         self.ui.extracted_images_gridlayout.addWidget(widget_m, i, j)
-                    # elif self.IMAGE_TYPE == "Solutions":
-                    #     widget = self.extractedImageWidget(list(self.images_in_grid.keys())[index], list(self.images_in_grid.values())[index])
-                    #     self.ui.extracted_images_gridlayout.addWidget(widget, i, j)
-                    # index += 1
                     widget = self.extractedImageWidget(list(self.images_in_grid.keys())[index], list(self.images_in_grid.values())[index])
                     self.ui.extracted_images_gridlayout.addWidget(widget, i, j)
+                    #print(self.ui.extracted_images_gridlayout.itemAtPosition(i, j).widget().children()[2].text())
                 if self.grid_col_start_idx == MAX_COLS - 1:
                     self.grid_col_start_idx = 0
             self.grid_col_start_idx += 1
@@ -313,7 +310,72 @@ class AddExercisesPage(Page, QWidget):
                             break
                 else:
                     break
+        if len(self.images_in_grid) > 0:
+            widget_width = 200
+            widget_height = 80
+            keys = iter(self.extracted_image_arrays.keys())
+            if len(self.extracted_image_arrays) % MAX_COLS == 0:
+                last_row_count = MAX_COLS
+            else:
+                last_row_count = len(self.extracted_image_arrays) % MAX_COLS
+            #M = int(np.ceil(self.ui.extracted_images_gridlayout.count()/MAX_COLS))
+            M = int(np.ceil(len(self.extracted_image_arrays)/MAX_COLS))
+            for i in range(M):
+                if i == M - 1:
+                    N = last_row_count
+                else:
+                    N = MAX_COLS
+                for j in range(N):
+                    try:
+                        key = next(keys)
+                        if self.extracted_image_arrays[key] != self.images_in_grid[key]:
+                            if self.IMAGE_TYPE == "Exercises":
+                                np_image_array_u = np.array(self.extracted_image_arrays[key]["unmasked"])
+                                height, width, channel = np_image_array_u.shape
+                                bytesPerLine = channel * width
+                                qImg_u = QImage(np_image_array_u, width, height, bytesPerLine, QImage.Format_RGBX8888)
+                                qpixmap_u = QPixmap(qImg_u)
+                                qpixmap_u = qpixmap_u.scaled(widget_width, widget_height - 40, Qt.KeepAspectRatio, transformMode=Qt.SmoothTransformation)
+                                pic_u_label = self.ui.extracted_images_gridlayout.itemAtPosition(i, j).widget().children()[1].children()[1]
+                                pic_u_label.setAlignment(Qt.AlignCenter)
+                                pic_u_label.setPixmap(qpixmap_u)
+                                pic_u_label.setWindowFlags(Qt.FramelessWindowHint)
+                                pic_u_label.setAttribute(Qt.WA_TranslucentBackground)
+                                ElementStyles.lightShadow(pic_u_label)
 
+                                np_image_array_m = np.array(self.extracted_image_arrays[key]["masked"])
+                                height, width, channel = np_image_array_m.shape
+                                bytesPerLine = channel * width
+                                qImg_u = QImage(np_image_array_u, width, height, bytesPerLine, QImage.Format_RGBX8888)
+                                qpixmap_u = QPixmap(qImg_u)
+                                qpixmap_u = qpixmap_u.scaled(widget_width, widget_height - 40, Qt.KeepAspectRatio, transformMode=Qt.SmoothTransformation)
+                                pic_u_label = self.ui.extracted_images_gridlayout.itemAtPosition(i, j).widget().children()[1].children()[2]
+                                pic_u_label.setAlignment(Qt.AlignCenter)
+                                pic_u_label.setPixmap(qpixmap_u)
+                                pic_u_label.setWindowFlags(Qt.FramelessWindowHint)
+                                pic_u_label.setAttribute(Qt.WA_TranslucentBackground)
+                                ElementStyles.lightShadow(pic_u_label)
+
+
+                            elif self.IMAGE_TYPE == "Solutions":
+                                np_image_array = np.array(self.extracted_image_arrays[key])
+                                height, width, channel = np_image_array.shape
+                                bytesPerLine = channel * width
+                                qImg = QImage(np_image_array, width, height, bytesPerLine, QImage.Format_RGBX8888)
+                                qpixmap = QPixmap(qImg)
+                                qpixmap = qpixmap.scaled(widget_width, widget_height - 40, Qt.KeepAspectRatio, transformMode=Qt.SmoothTransformation)
+
+                                pic_label = self.ui.extracted_images_gridlayout.itemAtPosition(i, j).widget().children()[1]
+                                pic_label.setPixmap(qpixmap)
+                                pic_label.setAlignment(Qt.AlignCenter)
+                                pic_label.setWindowFlags(Qt.FramelessWindowHint)
+                                pic_label.setAttribute(Qt.WA_TranslucentBackground)
+                                ElementStyles.lightShadow(pic_label)
+
+                            self.images_in_grid[key] = self.extracted_image_arrays[key]
+                    except:
+                        pass
+                        pass
 
     def clearImagesGrid(self):
         self.last_grid_row_idx = 0
@@ -321,17 +383,20 @@ class AddExercisesPage(Page, QWidget):
         self.ui.extracted_images_label.setText("Extracted Images: 0")
         for i in reversed(range(self.ui.extracted_images_gridlayout.count())):
             self.ui.extracted_images_gridlayout.itemAt(i).widget().setParent(None)
+            #self.ui.extracted_images_gridlayout.removeWidget(self.ui.extracted_images_gridlayout.itemAt(i).widget())
 
     def sectionsEntryClicked(self, set_index):
         #if len(os.listdir(Config.TEMP_SS_PATH)) == 0:
+        self.selected_extracted_image_entry_index = None
         self.ui.png_label.clear()
         self.clearExerciseImageButtonsLayout()
-        self.current_set_index = set_index
-        selected_widget = self.ui.add_exercises_sections_listwidget.itemWidget(self.ui.add_exercises_sections_listwidget.item(self.current_set_index))
-        ElementStyles.selectedListItem(selected_widget)
-        if self.prev_selected_section_widget is not None:
-            ElementStyles.unselectedListItem(self.prev_selected_section_widget)
-        self.prev_selected_section_widget = selected_widget
+        if self.current_set_index != set_index:
+            self.current_set_index = set_index
+            selected_widget = self.ui.add_exercises_sections_listwidget.itemWidget(self.ui.add_exercises_sections_listwidget.item(self.current_set_index))
+            ElementStyles.selectedListItem(selected_widget)
+            if self.prev_selected_section_widget is not None:
+                ElementStyles.unselectedListItem(self.prev_selected_section_widget)
+            self.prev_selected_section_widget = selected_widget
         self.selected_chap_num = self.textbook_sections[self.current_set_index]["ChapterNumber"]
         self.selected_sect_num = self.textbook_sections[self.current_set_index]["SectionNumber"]
         self.selected_exercises = self.db_interface.fetchEntries("Exercises", [self.selected_textbook_ID, self.selected_chap_num, self.selected_sect_num])
@@ -532,6 +597,21 @@ class AddExercisesPage(Page, QWidget):
             ElementStyles.unselectedListItem(self.prev_selected_extracted_image_widget)
         self.prev_selected_extracted_image_widget = widget
 
+    def deleteImageEntry(self):
+        if self.prev_selected_extracted_image_widget is not None:
+            self.images_in_grid.pop(self.selected_extracted_image_entry_index)
+            self.extracted_image_arrays.pop(self.selected_extracted_image_entry_index)
+            self.last_grid_row_idx = 0
+            self.grid_col_start_idx = 0
+            del_index = self.ui.extracted_images_gridlayout.indexOf(self.prev_selected_extracted_image_widget)
+            self.ui.extracted_images_gridlayout.itemAt(del_index).widget().setParent(None)
+            self.updateExtractedImagesGrid()
+            self.selected_extracted_image_entry_index = None
+            self.prev_selected_extracted_image_widget = None
+            self.ui.png_label.clear()
+
+
+
 
 
     def annotateAndExtract(self, chapter, section):
@@ -552,35 +632,32 @@ class AddExercisesPage(Page, QWidget):
                 section = "00"
         else:
             section = str(section)
-        # if not os.path.exists(os.path.join(Config.E_PACKS_DIR, self.selected_category)):
-        #     os.mkdir(os.path.join(Config.E_PACKS_DIR, self.selected_category))
         self.current_set = {}
         if self.IMAGE_TYPE == "Exercises":
             set_dir_masked = os.path.join(self.e_packs_txtbk_dir, "Exercises Images", "Masked", chapter)
             set_dir_unmasked = os.path.join(self.e_packs_txtbk_dir, "Exercises Images", "Unmasked", chapter)
             os.makedirs(set_dir_masked, exist_ok=True)
             os.makedirs(set_dir_unmasked, exist_ok=True)
-            #set = [[chapter, section], {"masked": set_dir_masked, "unmasked": set_dir_unmasked}]
             self.current_set = {"Chapter": chapter, "Section": section, "Images_Dir": {"Masked": set_dir_masked, "Unmasked": set_dir_unmasked}}
         elif self.IMAGE_TYPE == "Solutions":
             set_dir = os.path.join(self.e_packs_txtbk_dir, "Solutions Images", chapter)
             os.makedirs(set_dir, exist_ok=True)
-            #set = [[chapter, section], set_dir]
             self.current_set = {"Chapter": chapter, "Section": section, "Images_Dir": set_dir}
         if len(self.event_handlers) > 0:
             for i in range(len(self.event_handlers)):
                 self.event_handlers[i].disconnect()
-                #self.event_handlers[i].activated.disconnect()
         for i in range(len(Config.STANDARD_OPs)):
             command = Config.STANDARD_OPs[i]
             if len(self.event_handlers) != len(Config.ALL_OPs):
                 self.event_handlers.append(QShortcut(QKeySequence(command), self.ui))
-            self.event_handlers[i].activated.connect(partial(self.image_extractor.annotateOneColumn, command, self.current_set, self.IMAGE_TYPE, self.ret_current_index_number))
+            self.event_handlers[i].activated.connect(partial(self.image_extractor.annotateOneColumn, command, self.current_set, self.ret_current_index_number, self.IMAGE_TYPE))
         if len(self.event_handlers) != len(Config.ALL_OPs):
             self.event_handlers.append(QShortcut(QKeySequence(Config.OP_TWO_COLUMNS), self.ui))
             self.event_handlers.append(QShortcut(QKeySequence(Config.OP_RESET_IMAGE_LIST), self.ui))
-        self.event_handlers[-2].activated.connect(partial(self.image_extractor.annotateTwoColumns, Config.OP_TWO_COLUMNS, self.current_set, self.IMAGE_TYPE, self.ret_current_index_number))
+        self.event_handlers[-2].activated.connect(partial(self.image_extractor.annotateTwoColumns, Config.OP_TWO_COLUMNS, self.current_set, self.ret_current_index_number, self.IMAGE_TYPE))
         self.event_handlers[-1].activated.connect(partial(self.saveAndUploadExtractedImages))
+        print("Current set: " + self.current_set["Chapter"] + "." + self.current_set["Section"])
+        print("Extraction Mode: " + self.IMAGE_TYPE)
         print("Shortcuts active")
         print("------------------------------------------")
 
@@ -644,31 +721,32 @@ class AddExercisesPage(Page, QWidget):
                         self.db_interface.updateEntry("Solution Path For Exercise", update_row)
                         print("Updated row: " + str(update_row))
                     elif (not self.ui.overwrite_image_checkbox.isChecked() and sol_exists != None and sol_exists != "") or sol_exists == True:
-                        print("Solution already exist or overwrite is false: " + EN)
+                        print("Solution already exist or overwrite is false: " + str(EN))
                     self.last_image_index = EN
                 elif sol_exists is None or sol_exists == "":
                     update_row = [str(False), "", self.selected_textbook_ID, eid]
                     self.db_interface.updateEntry("Solution Path For Exercise", update_row)
                     print("Updated row: " + str(update_row))
-
         if self.IMAGE_TYPE == "Exercises":
             update_row = [self.selected_textbook_ID, self.selected_chap_num, self.selected_sect_num]
             self.db_interface.updateEntry("AllExercisesExtracted", update_row)
         elif self.IMAGE_TYPE == "Solutions":
             update_row = [self.selected_textbook_ID, self.selected_chap_num, self.selected_sect_num]
             self.db_interface.updateEntry("AllSolutionsExtracted", update_row)
-        self.current_set_index += 1
+        print("------------------------------------------")
+        #self.current_set_index += 1
         self.extracted_image_arrays.clear()
         self.images_in_grid.clear()
         self.clearImagesGrid()
         self.image_extractor.header = []
         self.clearExerciseImageButtonsLayout()
-        if self.current_set_index < len(self.textbook_sections):
-            self.sectionsEntryClicked(self.current_set_index)
+        if self.current_set_index + 1 < len(self.textbook_sections):
+            self.prev_selected_extracted_image_widget = None
+            self.sectionsEntryClicked(self.current_set_index + 1)
             self.extracted_images_timer.start(1000)
             self.extracted_images_timer.timeout.connect(lambda: self.updateExtractedImagesGrid())
-            print("Current set: " + str(self.selected_chap_num) + " " + str(self.selected_sect_num))
-            print(self.IMAGE_TYPE + " sets left: " + str(len(self.textbook_sections) - self.current_set_index))
+            #print("Current set: " + str(self.selected_chap_num) + " " + str(self.selected_sect_num))
+            print(self.IMAGE_TYPE + " sets left: " + str(len(self.textbook_sections) - self.current_set_index))#self.current_set_index incremented
             print("------------------------------------------")
         else:
             print("Finished.")

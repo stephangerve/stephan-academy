@@ -1,8 +1,7 @@
 import ElementStyles
 from ContentPages.ClassPage import Page
 from ClassDBInterface import DBInterface
-from UIElements import ButtonElement
-from UIElements import ListElement
+from CustomWidgets.ClassListWidget import ListWidget
 from PyQt5 import QtCore
 from PyQt5.QtWidgets import QPushButton, QLabel, QHBoxLayout, QWidget, QFrame, QVBoxLayout
 from PyQt5.QtGui import QFont, QPixmap, QCursor

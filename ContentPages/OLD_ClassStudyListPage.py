@@ -1,6 +1,5 @@
 import ElementStyles
 from ContentPages.ClassPage import Page
-from CustomWidgets.ClassScrollAreaWidget import ScrollAreaWidget
 from CustomWidgets.ClassListWidget import ListWidget
 from PyQt5 import QtCore, Qt
 from PyQt5.QtWidgets import QLabel, QHeaderView, QCheckBox, QPushButton, QLineEdit, QListWidgetItem, QAbstractItemView, QListWidget, QSizePolicy, QFrame
@@ -12,7 +11,6 @@ import string
 from datetime import date
 import matplotlib.pyplot as plt
 import io
-import os
 import numpy as np
 from datetime import datetime
 
@@ -22,7 +20,7 @@ class StudyListPage(Page):
     def __init__(self, ui, ):
         Page.__init__(self, Config.StudyListPage_page_number)
         self.ui = ui
-        self.sl_scroll_area_element = ScrollAreaWidget(self.ui.sl_collection_scrollarea)
+        self.sl_list_element = ListWidget(self.ui.study_lists_listwidget)
         self.sl_chap_sects_list_element = ListWidget(self.ui.sl_sections_listwidget)
         self.sect_grades_counts = {}
         self.remove_sections_from_sl_button = None
@@ -40,21 +38,25 @@ class StudyListPage(Page):
     def showPage(self):
         self.selected_study_list = None
         self.selected_section = None
-        self.prev_study_list_item_widget = None
+        self.prev_study_list_item = None
         self.prev_section_list_widget_item = None
         self.ui.sl_date_filter_button.clicked.connect(lambda: self.setDateFilter())
         self.setDateFilter()
-        #self.updateSLCollectionsDict()
+        self.updateSLCollectionsDict()
         self.sections_selected_count = 0
-        # if self.ui.study_lists_listwidget.count() > 0:
-        #     self.ui.study_lists_listwidget.itemClicked.disconnect()
+        if self.ui.study_lists_listwidget.count() > 0:
+            self.ui.study_lists_listwidget.itemClicked.disconnect()
         if self.ui.sl_sections_listwidget.count() > 0:
             self.ui.sl_sections_listwidget.itemClicked.disconnect()
         self.ui.progress_donut_label.clear()
         self.ui.sb_frame_2.setStyleSheet("background-color: gray")
         self.ui.start_button_2.setStyleSheet("color: black")
         self.ui.start_button_2.setEnabled(False)
-
+        # ElementStyles.regularShadow(self.ui.progress_donut_label)
+        # self.ui.progress_donut_frame.setWindowFlags(QtCore.Qt.FramelessWindowHint)
+        # self.ui.progress_donut_frame.setAttribute(QtCore.Qt.WA_TranslucentBackground)
+        # self.ui.progress_donut_label.setAttribute(QtCore.Qt.WA_TranslucentBackground)
+        # self.ui.progress_donut_label.setAttribute(QtCore.Qt.WA_TranslucentBackground)
         ElementStyles.regularShadow(self.ui.remove_from_sl_button)
         ElementStyles.regularShadow(self.ui.textbook_info_frame_left_2)
         ElementStyles.regularShadow(self.ui.ex_stats_info_2)
@@ -75,19 +77,16 @@ class StudyListPage(Page):
                 button.setCursor(QCursor(QtCore.Qt.PointingHandCursor))
         self.clearExercisesGrid()
         self.sl_chap_sects_list_element.clear()
-        self.sl_scroll_area_element.setList("Study List Collections", self.study_list_collections)
+        self.sl_list_element.setList("Study List Collections", self.study_list_collections)
 
-        # self.frame = QFrame()
-        # self.frame.setStyleSheet("background-color: gray")
-        # self.frame.setFixedHeight(100)
-        # self.sl_scroll_area_element.scroll_area_layout.insertWidget(self.sl_scroll_area_element.scroll_area_layout.count() - 1, self.frame)
-        # self.sl_scroll_area_element.count += 1
-        #
-        # widget = self.sl_scroll_area_element.createWidget("Study List Collections", self.study_list_collections[0])
-        # self.sl_scroll_area_element.scroll_area_layout.insertWidget(self.sl_scroll_area_element.scroll_area_layout.count() - 1, widget)
-        # self.sl_scroll_area_element.count += 1
+        widget = QFrame()
+        widget.setFixedHeight(500)
+        self.sl_list_element.insert(widget)
 
+        widget = self.sl_list_element.createWidget("Study List Collections", self.study_list_collections[0])
+        self.sl_list_element.insert(widget)
 
+        self.ui.study_lists_listwidget.itemClicked.connect(lambda: self.studyListWidgetItemClicked(self.ui.study_lists_listwidget.currentItem()))
         self.selected_collection = None
         self.selected_study_list = None
         self.selected_section = None
@@ -163,9 +162,8 @@ class StudyListPage(Page):
     def setDateFilter(self):
         parsed_date = [str(l).zfill(2) if len(str(l)) == 1 else str(l) for l in list(self.ui.sl_date_filter_edit.date().getDate())]
         self.date_filter = "/".join([parsed_date[1], parsed_date[2], parsed_date[0]])
-        self.updateSLCollectionsDict()
-        if self.prev_study_list_item_widget is not None:
-            self.studyListClicked(self.prev_study_list_item_widget)
+        if self.prev_study_list_item is not None:
+            self.studyListWidgetItemClicked(self.prev_study_list_item)
 
 
     def showProgressDonut(self):
@@ -201,103 +199,81 @@ class StudyListPage(Page):
             self.ui.progress_donut_label.clear()
 
 
-    def slCollectionClicked(self, collection_name, item_widget):
-        self.selected_collection = collection_name
-        if self.prev_study_list_item_widget is not None:
-            ElementStyles.unselectedListItem(self.prev_study_list_item_widget)
-        self.prev_study_list_item_widget = None
+    def studyListWidgetItemClicked(self, list_item):
+        item_widget = self.ui.study_lists_listwidget.itemWidget(list_item)
+        self.selected_collection = item_widget.children()[1].children()[1].children()[2].text()
+        if self.prev_study_list_item is not None:
+            ElementStyles.unselectedListItem(self.ui.study_lists_listwidget.itemWidget(self.prev_study_list_item))
+        self.prev_study_list_item = None
         if self.sl_collection_expanded[self.selected_collection] is False:
             self.sl_collection_expanded[self.selected_collection] = True
-            list_widget = QListWidget()
-            list_widget.setSpacing(0)
-            list_widget.setStyleSheet("border: None")
-            item_widget.children()[0].addWidget(list_widget)
-            self.sl_list_element2 = ListWidget(item_widget.children()[2])
+            item_widget.children()[1].children()[0].addWidget(QListWidget())
+            self.sl_list_element2 = ListWidget(item_widget.children()[1].children()[2])
             self.sl_list_element2.setList("Study Lists", self.sl_collections_dict[self.selected_collection].values(), give_shadow=False, vertical_spacing=0)
-            self.sl_list_element2.setDragDropMode()
-            item_widget.parent().setFixedHeight(33 * (len(self.sl_collections_dict[self.selected_collection].values()) + 1))
-
-            # if self.ui.sl_collection_scrollarea.verticalScrollBar().isVisible():
-            #     item_widget.children()[2].setFixedWidth(item_widget.width() - self.ui.sl_collection_scrollarea.verticalScrollBar().width())
-            # else:
-            #     item_widget.children()[2].setFixedWidth(item_widget.width())
-            if self.ui.sl_collection_scrollarea.verticalScrollBar().isVisible():
-                item_widget.children()[2].setFixedWidth(item_widget.width() - self.ui.sl_collection_scrollarea.verticalScrollBar().width())
-                for i in range(item_widget.children()[2].count()):
-                    item_widget.children()[2].itemWidget(item_widget.children()[2].item(i)).setFixedWidth(item_widget.width() - self.ui.sl_collection_scrollarea.verticalScrollBar().width())
-
-
-
+            item_widget.setMinimumHeight(33 * (len(self.sl_collections_dict[self.selected_collection].values()) + 1))
             pix = QPixmap(Config.DOWN_ARROW)
             pix = pix.scaled(15, 15, Qt.KeepAspectRatio, transformMode=Qt.SmoothTransformation)
-            item_widget.children()[1].children()[1].setPixmap(pix)
-            
-            item_widget.children()[2].itemClicked.connect(lambda: self.studyListClicked(item_widget.children()[2].itemWidget(item_widget.children()[2].currentItem())))
+            item_widget.children()[1].children()[1].children()[1].setPixmap(pix)
 
+
+
+
+        # else:
+        #     self.sl_collection_expanded[self.selected_collection] = False
+        #     self.sl_list_element.removeFromList("Study Lists", self.sl_collections_dict[self.selected_collection].values(), list_item)
+        #     pix = QPixmap(Config.RIGHT_ARROW)
+        #     pix = pix.scaled(15, 15, Qt.KeepAspectRatio, transformMode=Qt.SmoothTransformation)
+        #     item_widget.children()[1].setPixmap(pix)
 
         else:
-            self.sl_collection_expanded[self.selected_collection] = False
-            item_widget.children()[2].itemClicked.disconnect()
-            item_widget.children()[0].removeWidget(item_widget.children()[2])
-            if len(item_widget.children()) > 2:
-                item_widget.children()[2].deleteLater()
-            item_widget.parent().setFixedHeight(33)
-            pix = QPixmap(Config.RIGHT_ARROW)
-            pix = pix.scaled(15, 15, Qt.KeepAspectRatio, transformMode=Qt.SmoothTransformation)
-            item_widget.children()[1].children()[1].setPixmap(pix)
-
-    def studyListClicked(self, item_widget):
-        # pix = QPixmap(Config.DRAG_HANDLE)
-        # pix = pix.scaled(15, 15, Qt.KeepAspectRatio, transformMode=Qt.SmoothTransformation)
-        # item_widget.children()[1].setPixmap(pix)
-        #self.ui.study_lists_listwidget.setDragDropMode(QAbstractItemView.InternalMove)
-        self.TID_sort_order = None
-        self.CN_sort_order = None
-        self.SN_sort_order = None
-        self.count_sort_order = None
-        self.progress_sort_order = None
-        self.prev_section_list_widget_item = None
-        self.ui.sb_frame.setStyleSheet("background-color: gray")
-        self.ui.start_button_2.setStyleSheet("color: black")
-        self.ui.start_button_2.setEnabled(False)
-        self.sl_chap_sects_list_element.clear()
-        self.ui.chapter_info_label_2.clear()
-        self.ui.section_info_label_2.clear()
-        self.clearExercisesGrid()
-        old_study_list = self.selected_study_list
-        self.selected_study_list = item_widget.children()[5].text()
-        self.selected_collection = [coll for coll in self.sl_collections_dict if self.selected_study_list in self.sl_collections_dict[coll]][0]
-        if len(self.sl_collections_dict[self.selected_collection][self.selected_study_list]["Sections"]) > 0:
-            self.updateSLSectionList()
-            self.showProgressDonut()
-            self.ui.sl_sections_listwidget.itemClicked.connect(lambda: self.studyListSectionClicked(self.ui.sl_sections_listwidget.itemWidget(self.ui.sl_sections_listwidget.currentItem())))
-            for i in range(self.ui.sl_sections_listwidget.count()):
-                self.disconnectWidget(self.ui.sl_sections_listwidget.itemWidget(self.ui.sl_sections_listwidget.item(i)).children()[-2])
-                self.disconnectWidget(self.ui.sl_sections_listwidget.itemWidget(self.ui.sl_sections_listwidget.item(i)).children()[1])
-                self.ui.sl_sections_listwidget.itemWidget(self.ui.sl_sections_listwidget.item(i)).children()[-2].clicked.connect(lambda state, i=i: self.startButtonClicked(self.ui.sl_sections_listwidget.itemWidget(self.ui.sl_sections_listwidget.item(i))))
-                self.ui.sl_sections_listwidget.itemWidget(self.ui.sl_sections_listwidget.item(i)).children()[1].stateChanged.connect(lambda state, i=i: self.multipleSectionsSelected(self.ui.sl_sections_listwidget.itemWidget(self.ui.sl_sections_listwidget.item(i))))
-        else:
-            self.ui.progress_donut_label.clear()
-        if self.prev_study_list_item_widget is not None:
-            ElementStyles.unselectedListItem(self.prev_study_list_item_widget)
-            progress_label = self.prev_study_list_item_widget.children()[7]
-            self.sl_chap_sects_list_element.updateProgressBar(progress_label, self.sl_collections_dict[self.selected_collection][old_study_list])
-        ElementStyles.selectedListItem(item_widget)
-        progress_label = item_widget.children()[7]
-        self.sl_chap_sects_list_element.updateProgressBar(progress_label, self.sl_collections_dict[self.selected_collection][self.selected_study_list])
-        self.prev_study_list_item_widget = item_widget
-        self.sections_selected_count = 0
-        self.disconnectWidget(self.ui.sl_select_all_sections_checkbox)
-        self.disconnectWidget(self.ui.sl_CN_sort_button)
-        self.disconnectWidget(self.ui.sl_CN_sort_button)
-        self.disconnectWidget(self.ui.sl_SN_sort_button)
-        self.disconnectWidget(self.ui.sl_count_sort_button)
-        self.disconnectWidget(self.ui.sl_progress_sort_button)
-        self.ui.sl_select_all_sections_checkbox.stateChanged.connect(lambda: self.selectAllSections(self.ui.sl_select_all_sections_checkbox.checkState()))
-        self.ui.sl_CN_sort_button.clicked.connect(lambda: self.sortSectionsListBy("ChapterNumber"))
-        self.ui.sl_SN_sort_button.clicked.connect(lambda: self.sortSectionsListBy("SectionNumber"))
-        self.ui.sl_count_sort_button.clicked.connect(lambda: self.sortSectionsListBy("Count"))
-        self.ui.sl_progress_sort_button.clicked.connect(lambda: self.sortSectionsListBy("Progress"))
+            # pix = QPixmap(Config.DRAG_HANDLE)
+            # pix = pix.scaled(15, 15, Qt.KeepAspectRatio, transformMode=Qt.SmoothTransformation)
+            # item_widget.children()[1].setPixmap(pix)
+            self.ui.study_lists_listwidget.setDragDropMode(QAbstractItemView.InternalMove)
+            self.TID_sort_order = None
+            self.CN_sort_order = None
+            self.SN_sort_order = None
+            self.count_sort_order = None
+            self.progress_sort_order = None
+            self.prev_section_list_widget_item = None
+            self.ui.sb_frame.setStyleSheet("background-color: gray")
+            self.ui.start_button_2.setStyleSheet("color: black")
+            self.ui.start_button_2.setEnabled(False)
+            self.sl_chap_sects_list_element.clear()
+            self.ui.chapter_info_label_2.clear()
+            self.ui.section_info_label_2.clear()
+            self.clearExercisesGrid()
+            self.selected_study_list = item_widget.children()[5].text()
+            self.selected_collection = [coll for coll in self.sl_collections_dict if self.selected_study_list in self.sl_collections_dict[coll]][0]
+            if len(self.sl_collections_dict[self.selected_collection][self.selected_study_list]["Sections"]) > 0:
+                self.updateSLSectionList()
+                self.showProgressDonut()
+                self.ui.sl_sections_listwidget.itemClicked.connect(lambda: self.studyListSectionClicked(self.ui.sl_sections_listwidget.itemWidget(self.ui.sl_sections_listwidget.currentItem())))
+                for i in range(self.ui.sl_sections_listwidget.count()):
+                    self.disconnectWidget(self.ui.sl_sections_listwidget.itemWidget(self.ui.sl_sections_listwidget.item(i)).children()[-2])
+                    self.disconnectWidget(self.ui.sl_sections_listwidget.itemWidget(self.ui.sl_sections_listwidget.item(i)).children()[1])
+                    self.ui.sl_sections_listwidget.itemWidget(self.ui.sl_sections_listwidget.item(i)).children()[-2].clicked.connect(lambda state, i=i: self.startButtonClicked(self.ui.sl_sections_listwidget.itemWidget(self.ui.sl_sections_listwidget.item(i))))
+                    self.ui.sl_sections_listwidget.itemWidget(self.ui.sl_sections_listwidget.item(i)).children()[1].stateChanged.connect(lambda state, i=i: self.multipleSectionsSelected(self.ui.sl_sections_listwidget.itemWidget(self.ui.sl_sections_listwidget.item(i))))
+            else:
+                self.ui.progress_donut_label.clear()
+            if self.prev_study_list_item is not None:
+                ElementStyles.unselectedListItem(self.ui.study_lists_listwidget.itemWidget(self.prev_study_list_item))
+                self.ui.study_lists_listwidget.itemWidget(self.prev_study_list_item).children()[1].clear()
+                self.ui.study_lists_listwidget.itemWidget(self.prev_study_list_item).children()[1].setFixedWidth(15)
+            ElementStyles.selectedListItem(item_widget)
+            self.prev_study_list_item = list_item
+            self.sections_selected_count = 0
+            self.disconnectWidget(self.ui.sl_select_all_sections_checkbox)
+            self.disconnectWidget(self.ui.sl_CN_sort_button)
+            self.disconnectWidget(self.ui.sl_CN_sort_button)
+            self.disconnectWidget(self.ui.sl_SN_sort_button)
+            self.disconnectWidget(self.ui.sl_count_sort_button)
+            self.disconnectWidget(self.ui.sl_progress_sort_button)
+            self.ui.sl_select_all_sections_checkbox.stateChanged.connect(lambda: self.selectAllSections(self.ui.sl_select_all_sections_checkbox.checkState()))
+            self.ui.sl_CN_sort_button.clicked.connect(lambda: self.sortSectionsListBy("ChapterNumber"))
+            self.ui.sl_SN_sort_button.clicked.connect(lambda: self.sortSectionsListBy("SectionNumber"))
+            self.ui.sl_count_sort_button.clicked.connect(lambda: self.sortSectionsListBy("Count"))
+            self.ui.sl_progress_sort_button.clicked.connect(lambda: self.sortSectionsListBy("Progress"))
 
     def startButtonClicked(self, item_widget):
         self.selected_section = [sect for sect in self.sl_collections_dict[self.selected_collection][self.selected_study_list]["Sections"] if sect["TextbookID"] == item_widget.children()[3].text() and sect["ChapterNumber"] == item_widget.children()[4].text() and sect["SectionNumber"] == item_widget.children()[5].text()][0]
@@ -378,13 +354,13 @@ class StudyListPage(Page):
                 # self.sl_list_element.setList("Study List", self.study_lists)
                 self.updateSLCollectionsDict()
 
-                self.ui.study_lists_listwidget.itemClicked.connect(lambda: self.studyListClicked(self.ui.study_lists_listwidget.itemWidget(self.ui.study_lists_listwidget.currentItem())))
+                self.ui.study_lists_listwidget.itemClicked.connect(lambda: self.studyListWidgetItemClicked(self.ui.study_lists_listwidget.itemWidget(self.ui.study_lists_listwidget.currentItem())))
                 for i in range(self.ui.study_lists_listwidget.count()):
                     item_widget = self.ui.study_lists_listwidget.itemWidget(self.ui.study_lists_listwidget.item(i))
                     #item_widget.children()[-1].clicked.connect(lambda state, item_widget=item_widget: self.deleteStudyList(item_widget))
                 self.selected_study_list = None
                 self.selected_section = None
-                self.prev_study_list_item_widget = None
+                self.prev_study_list_item = None
                 self.prev_section_list_widget_item = None
                 self.sections_selected_count = 0
                 self.clearExercisesGrid()
@@ -421,7 +397,7 @@ class StudyListPage(Page):
         #         item_widget.children()[-1].clicked.connect(lambda state, item_widget=item_widget: self.deleteStudyList(item_widget))
         # self.selected_study_list = None
         # self.selected_section = None
-        # self.prev_study_list_item_widget = None
+        # self.prev_study_list_item = None
         # self.prev_section_list_widget_item = None
         # self.sections_selected_count = 0
         # self.clearExercisesGrid()
@@ -443,8 +419,8 @@ class StudyListPage(Page):
                     update_entry = [ex["Tags"], ex["TextbookID"], ex["ExerciseID"]]
                     self.db_interface.updateEntry("Update Exercise Tag", update_entry)
         self.updateSLCollectionsDict()
-        if self.prev_study_list_item_widget is not None:
-            self.studyListClicked(self.prev_study_list_item_widget)
+        if self.prev_study_list_item is not None:
+            self.studyListWidgetItemClicked(self.prev_study_list_item)
         self.clearSLSectionActionButtonLayout()
 
     def studyListSectionClicked(self, item_widget):
@@ -465,16 +441,6 @@ class StudyListPage(Page):
         ElementStyles.selectedListItem(item_widget)
         self.prev_section_list_widget_item = item_widget
 
-        self.setTextbookdir()
-        self.ui.open_txtbk_dir_button_2.clicked.connect(lambda: os.startfile(self.txtbk_dir))
-
-    def setTextbookdir(self):
-        txtbk_info = self.db_interface.fetchEntries("Textbook Info", [self.selected_section["TextbookID"]])[0]
-        if txtbk_info["Edition"] != "1st":
-            self.txtbk_dir = os.path.join(Config.MAIN_DIR, txtbk_info["Category"], " - ".join([txtbk_info["Authors"], txtbk_info["Title"], txtbk_info["Edition"]]), "Textbook")
-        else:
-            self.txtbk_dir = os.path.join(Config.MAIN_DIR, txtbk_info["Category"], " - ".join([txtbk_info["Authors"], txtbk_info["Title"]]), "Textbook")
-
 
     def updateGradeDistribution(self):
         self.sl_collections_dict[self.selected_collection][self.selected_study_list]["NumExercisesA"] = 0
@@ -483,37 +449,37 @@ class StudyListPage(Page):
         self.sl_collections_dict[self.selected_collection][self.selected_study_list]["NumExercisesD"] = 0
         self.sl_collections_dict[self.selected_collection][self.selected_study_list]["NumExercisesF"] = 0
         self.sl_collections_dict[self.selected_collection][self.selected_study_list]["NoGrade"] = 0
-        for section in self.sl_collections_dict[self.selected_collection][self.selected_study_list]["Sections"]:
+        for ex in self.sl_collections_dict[self.selected_collection][self.selected_study_list][self.selected_section]["Exercises"]:
+            section = [sect for sect in self.sl_collections_dict[self.selected_collection][self.selected_study_list]["Sections"] if sect["TextbookID"] == ex["TextbookID"] and sect["ChapterNumber"] == ex["ChapterNumber"] and sect["SectionNumber"] == ex["SectionNumber"]][0]
             section["NumExercisesA"] = 0
             section["NumExercisesB"] = 0
             section["NumExercisesC"] = 0
             section["NumExercisesD"] = 0
             section["NumExercisesF"] = 0
             section["NoGrade"] = 0
-            for ex in section["Exercises"]:
-                if ex["Attempts"] > 0:
-                    if datetime.strptime(ex["LastAttempted"], '%m/%d/%Y').date() >= datetime.strptime(self.date_filter, '%m/%d/%Y').date():
-                        if ex["Grade"] == 'A':
-                            section["NumExercisesA"] += 1
-                            self.sl_collections_dict[self.selected_collection][self.selected_study_list]["NumExercisesA"] += 1
-                        elif ex["Grade"] == 'B':
-                            section["NumExercisesB"] += 1
-                            self.sl_collections_dict[self.selected_collection][self.selected_study_list]["NumExercisesB"] += 1
-                        elif ex["Grade"] == 'C':
-                            section["NumExercisesC"] += 1
-                            self.sl_collections_dict[self.selected_collection][self.selected_study_list]["NumExercisesC"] += 1
-                        elif ex["Grade"] == 'D':
-                            section["NumExercisesD"] += 1
-                            self.sl_collections_dict[self.selected_collection][self.selected_study_list]["NumExercisesD"] += 1
-                        elif ex["Grade"] == 'F':
-                            section["NumExercisesF"] += 1
-                            self.sl_collections_dict[self.selected_collection][self.selected_study_list]["NumExercisesF"] += 1
-                    else:
-                        section["NoGrade"] += 1
-                        self.sl_collections_dict[self.selected_collection][self.selected_study_list]["NoGrade"] += 1
-                elif ex["SolutionExists"] == 'True':
+            if ex["Attempts"] > 0:
+                if datetime.strptime(ex["LastAttempted"], '%m/%d/%Y').date() >= datetime.strptime(self.date_filter, '%m/%d/%Y').date():
+                    if ex["Grade"] == 'A':
+                        section["NumExercisesA"] += 1
+                        self.sl_collections_dict[self.selected_collection][self.selected_study_list]["NumExercisesA"] += 1
+                    elif ex["Grade"] == 'B':
+                        section["NumExercisesB"] += 1
+                        self.sl_collections_dict[self.selected_collection][self.selected_study_list]["NumExercisesB"] += 1
+                    elif ex["Grade"] == 'C':
+                        section["NumExercisesC"] += 1
+                        self.sl_collections_dict[self.selected_collection][self.selected_study_list]["NumExercisesC"] += 1
+                    elif ex["Grade"] == 'D':
+                        section["NumExercisesD"] += 1
+                        self.sl_collections_dict[self.selected_collection][self.selected_study_list]["NumExercisesD"] += 1
+                    elif ex["Grade"] == 'F':
+                        section["NumExercisesF"] += 1
+                        self.sl_collections_dict[self.selected_collection][self.selected_study_list]["NumExercisesF"] += 1
+                else:
                     section["NoGrade"] += 1
                     self.sl_collections_dict[self.selected_collection][self.selected_study_list]["NoGrade"] += 1
+            elif ex["SolutionExists"] == 'True':
+                section["NoGrade"] += 1
+                self.sl_collections_dict[self.selected_collection][self.selected_study_list]["NoGrade"] += 1
 
 
     def updateSLSectionList(self):
@@ -632,7 +598,6 @@ class StudyListPage(Page):
 
 
     def sortSectionsListBy(self, column):
-        selected_sl_sections = self.sl_collections_dict[self.selected_collection][self.selected_study_list]["Sections"]
         if column == "TextbookID":
             self.CN_sort_order = 1
             self.SN_sort_order = 1
@@ -640,10 +605,10 @@ class StudyListPage(Page):
             self.count_sort_order = None
             if self.TID_sort_order is None or self.TID_sort_order == -1:
                 self.TID_sort_order = 1
-                selected_sl_sections = sorted(selected_sl_sections, key=lambda x: x['TextbookID'], reverse=True)
+                self.selected_sl_sections = sorted(self.selected_sl_sections, key=lambda x: x['TextbookID'], reverse=True)
             elif self.TID_sort_order == 1:
                 self.TID_sort_order = -1
-                selected_sl_sections = sorted(selected_sl_sections, key=lambda x: x['TextbookID'])
+                self.selected_sl_sections = sorted(self.selected_sl_sections, key=lambda x: x['TextbookID'])
         elif column == "ChapterNumber":
             self.TID_sort_order = None
             self.SN_sort_order = 1
@@ -651,10 +616,10 @@ class StudyListPage(Page):
             self.progress_sort_order = None
             if self.CN_sort_order is None or self.CN_sort_order == -1:
                 self.CN_sort_order = 1
-                selected_sl_sections = sorted(selected_sl_sections, key=lambda x: (int(x["ChapterNumber"]) if x["ChapterNumber"].isdigit() else 999, int(x["SectionNumber"]) if x["SectionNumber"].isdigit() else 999), reverse=True)
+                self.selected_sl_sections = sorted(self.selected_sl_sections, key=lambda x: (int(x["ChapterNumber"]) if x["ChapterNumber"].isdigit() else 999, int(x["SectionNumber"]) if x["SectionNumber"].isdigit() else 999), reverse=True)
             elif self.CN_sort_order == 1:
                 self.CN_sort_order = -1
-                selected_sl_sections = sorted(selected_sl_sections, key=lambda x: (int(x["ChapterNumber"]) if x["ChapterNumber"].isdigit() else 999, int(x["SectionNumber"]) if x["SectionNumber"].isdigit() else 999))
+                self.selected_sl_sections = sorted(self.selected_sl_sections, key=lambda x: (int(x["ChapterNumber"]) if x["ChapterNumber"].isdigit() else 999, int(x["SectionNumber"]) if x["SectionNumber"].isdigit() else 999))
         elif column == "SectionNumber":
             self.TID_sort_order = None
             self.CN_sort_order = 1
@@ -662,10 +627,10 @@ class StudyListPage(Page):
             self.progress_sort_order = None
             if self.SN_sort_order is None or self.SN_sort_order == -1:
                 self.SN_sort_order = 1
-                selected_sl_sections = sorted(selected_sl_sections, key=lambda x: (int(x['SectionNumber']) if x['SectionNumber'].isdigit() else 999, int(x['ChapterNumber']) if x['ChapterNumber'].isdigit() else 999), reverse=True)
+                self.selected_sl_sections = sorted(self.selected_sl_sections, key=lambda x: (int(x['SectionNumber']) if x['SectionNumber'].isdigit() else 999, int(x['ChapterNumber']) if x['ChapterNumber'].isdigit() else 999), reverse=True)
             elif self.SN_sort_order == 1:
                 self.SN_sort_order = -1
-                selected_sl_sections = sorted(selected_sl_sections, key=lambda x: (int(x['SectionNumber']) if x['SectionNumber'].isdigit() else 999, int(x['ChapterNumber']) if x['ChapterNumber'].isdigit() else 999))
+                self.selected_sl_sections = sorted(self.selected_sl_sections, key=lambda x: (int(x['SectionNumber']) if x['SectionNumber'].isdigit() else 999, int(x['ChapterNumber']) if x['ChapterNumber'].isdigit() else 999))
         elif column == "Count":
             self.TID_sort_order = None
             self.CN_sort_order = 1
@@ -673,16 +638,16 @@ class StudyListPage(Page):
             self.progress_sort_order = None
             if self.count_sort_order is None or self.count_sort_order == -1:
                 self.count_sort_order = 1
-                selected_sl_sections = sorted(selected_sl_sections, key=lambda x: x['Count'], reverse=True)
+                self.selected_sl_sections = sorted(self.selected_sl_sections, key=lambda x: x['Count'], reverse=True)
             elif self.count_sort_order == 1:
                 self.count_sort_order = -1
-                selected_sl_sections = sorted(selected_sl_sections, key=lambda x: x['Count'])
+                self.selected_sl_sections = sorted(self.selected_sl_sections, key=lambda x: x['Count'])
         elif column == "Progress":
             self.TID_sort_order = None
             self.CN_sort_order = 1
             self.SN_sort_order = 1
             self.count_sort_order = None
-            for sect_entry in selected_sl_sections:
+            for sect_entry in self.selected_sl_sections:
                 if sect_entry["Count"] > 0:
                     weighted_count_A = sect_entry["NumExercisesA"] * 5
                     weighted_count_B = sect_entry["NumExercisesB"] * 4
@@ -694,14 +659,14 @@ class StudyListPage(Page):
                     sect_entry["Progress"] = 0.0
             if self.progress_sort_order is None or self.progress_sort_order == 1:
                 self.progress_sort_order = -1
-                selected_sl_sections = sorted(selected_sl_sections, key=lambda x: x['Progress'])
+                self.selected_sl_sections = sorted(self.selected_sl_sections, key=lambda x: x['Progress'])
             elif self.progress_sort_order == -1:
                 self.progress_sort_order = 1
-                selected_sl_sections = sorted(selected_sl_sections, key=lambda x: x['Progress'], reverse=True)
+                self.selected_sl_sections = sorted(self.selected_sl_sections, key=lambda x: x['Progress'], reverse=True)
 
 
 
-        self.sl_chap_sects_list_element.setList("Selected Study List Sections", selected_sl_sections)
+        self.sl_chap_sects_list_element.setList("Selected Study List Sections", self.selected_sl_sections)
         self.disconnectWidget(self.ui.sl_sections_listwidget)
         self.ui.sl_sections_listwidget.itemClicked.connect(lambda: self.studyListSectionClicked(self.ui.sl_sections_listwidget.itemWidget(self.ui.sl_sections_listwidget.currentItem())))
         self.prev_section_list_widget_item = None

@@ -1,6 +1,5 @@
 import ElementStyles
 from ContentPages.ClassPage import Page
-from UIElements import ListElement
 from PyQt5 import QtCore, Qt
 from PyQt5.QtWidgets import QLabel, QHeaderView, QCheckBox, QPushButton
 from PyQt5.QtGui import QFont, QCursor, QPixmap, QImage

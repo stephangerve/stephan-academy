@@ -6,21 +6,24 @@ from PyQt5 import QtCore
 
 def regularShadow(object):
     shadow = QGraphicsDropShadowEffect()
-    shadow.setOffset(2, 2)
+    shadow.setOffset(0, 2)
     shadow.setColor(QColor(38, 78, 119, 127))
     shadow.setBlurRadius(10)
     object.setGraphicsEffect(shadow)
 
 def lightShadow(object):
     shadow = QGraphicsDropShadowEffect()
-    shadow.setOffset(1, 1)
+    shadow.setOffset(0, 1)
     shadow.setColor(QColor(38, 78, 119, 127))
     shadow.setBlurRadius(5)
     object.setGraphicsEffect(shadow)
 
-def whiteRoundSquare(object):
-    object.setStyleSheet("border-radius: 5px; background-color: white")
-
+def lightShadow2(object):
+    shadow = QGraphicsDropShadowEffect()
+    shadow.setOffset(0, 1)
+    shadow.setColor(QColor(150, 150, 150, 127))
+    shadow.setBlurRadius(5)
+    object.setGraphicsEffect(shadow)
 
 
 def selectedListItem(listitemwidget):
@@ -35,6 +38,8 @@ def hoverEffect(qobject):
 def hoverEffectSideBar(qobject):
     qobject.setStyleSheet("QObject::hover{background-color : #556785;};")
 
+def highlightListItem(item_widget):
+    item_widget.setStyleSheet("background-color: #ccf6ff")
 
 ########################################################################################################################
 # def redBackground(object):
@@ -81,4 +86,7 @@ def hoverEffectSideBar(qobject):
 #                              "color: #eeeeec; "
 #                              "text-align:left; "
 #                              "padding-left:40px")
+#
+# def whiteRoundSquare(object):
+#     object.setStyleSheet("border-radius: 5px; background-color: white")
 

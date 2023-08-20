@@ -1,6 +1,6 @@
 import ElementStyles
 from ContentPages.ClassPage import Page
-from UIElements import ListElement
+from CustomWidgets.ClassListWidget import ListWidget
 from PyQt5 import QtCore, Qt
 from PyQt5.QtWidgets import QLabel, QHeaderView, QCheckBox, QPushButton
 from PyQt5.QtGui import QFont, QCursor, QPixmap, QImage
@@ -20,8 +20,8 @@ class FlashcardsPage(Page):
     def __init__(self, ui):
         Page.__init__(self, Config.FlashcardsPage_page_number)
         self.ui = ui
-        self.collection_list_element = ListElement(self.ui.collection_listwidget)
-        self.flashcard_sets_list_element = ListElement(self.ui.flashcard_sets_listwidget)
+        self.collection_list_element = ListWidget(self.ui.collection_listwidget)
+        self.flashcard_sets_list_element = ListWidget(self.ui.flashcard_sets_listwidget)
         self.collection_txtbks = []
         ElementStyles.regularShadow(self.ui.textbook_info_frame_left_3)
         ElementStyles.regularShadow(self.ui.ex_stats_info_3)

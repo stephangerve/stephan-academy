@@ -10,20 +10,21 @@ class DBInterface():
 
 
     def __init__(self,):
-        self.initUI()
-
-
-    def initUI(self):
+        self.connectToDB()
+        self.counter = 0
+#☺
+    def connectToDB(self) -> mysql.connector.connect:
         self.cnx = mysql.connector.connect(
             host=Config.HOSTNAME,
             user=Config.USERNAME,
             database=Config.DATABASENAME,
             password=Config.PASSWORD
         )
+        print("Connected to DB.")
+
     def fetchBool(self, table_name, parameters):
         query_string = self.getQueryString("Check", table_name, parameters)
-        cursor = self.cnx.cursor()
-        cursor.execute(query_string)
+        cursor = self.executeQuery(query_string, [], modifying=False)
         entries = cursor.fetchall()
         if len(entries) == 0:
             return False
@@ -39,37 +40,31 @@ class DBInterface():
     def updateEntry(self, table_name, parameters):
         query_string = self.getQueryString("Update", table_name, parameters)
         print(query_string)
-        cursor = self.cnx.cursor()
-        cursor.execute(query_string)
-        self.cnx.commit()
+        self.executeQuery(query_string, parameters, modifying=True)
 
     def insertEntry(self, table_name, parameters):
         query_string = self.getQueryString("Insert", table_name, parameters)
-        cursor = self.cnx.cursor()
-        cursor.execute(query_string, parameters)
-        self.cnx.commit()
-        pass
-        pass
+        self.executeQuery(query_string, parameters, modifying=True)
+
+    def deleteEntry(self, table_name, parameters):
+        query_string = self.getQueryString("Delete", table_name, parameters)
+        self.executeQuery(query_string, parameters, modifying=True)
 
     def fetchColumnNames(self, table_name, parameters):
         query_string = self.getQueryString("Fetch", table_name, parameters)
-        cursor = self.cnx.cursor()
-        cursor.execute(query_string)
+        cursor = self.executeQuery(query_string, parameters, modifying=False)
         column_names = list(cursor.column_names)
-        #column_names[0] = "ID"
         cursor.fetchall()
         return column_names
 
     def fetchEntries(self, table_name, parameters):
         query_string = self.getQueryString("Fetch", table_name, parameters)
-        cursor = self.cnx.cursor()
-        cursor.execute(query_string)
+        cursor = self.executeQuery(query_string, parameters, modifying=False)
         entries = self.convertToDict(cursor.column_names, cursor.fetchall())
         return entries
 
     def convertToDict(self, column_names, entries):
         column_names = list(column_names)
-        #column_names[0] = "ID"
         return [dict(zip(column_names, entry)) for entry in entries]
 
 
@@ -120,6 +115,17 @@ class DBInterface():
                         "SELECT * "
                         "FROM study_lists "
                 )
+            elif table_name == "Study List Collection":
+                query = (
+                    "SELECT * "
+                    "FROM study_list_collections "
+                    "WHERE CollectionID = " + parameters[0] + " "
+                )
+            elif table_name == "Study List Collections":
+                query = (
+                    "SELECT * "
+                    "FROM study_list_collections "
+                )
             elif table_name == "Section Grade Counts":
                 query = (
                     "SELECT "
@@ -165,6 +171,12 @@ class DBInterface():
                     "SET Tags = '" + parameters[0] + "' "
                     "WHERE TextbookID = '" + parameters[1] + "' "
                     "AND ExerciseID = '" + parameters[2] + "'"
+                )
+            if table_name == "Update SL Collection Tags":
+                query = (
+                        "UPDATE study_list_collections "
+                        "SET Tags = '" + parameters[0] + "' "
+                        "WHERE CollectionID = '" + parameters[1] + "' "
                 )
             elif table_name == "AllExercisesExtracted":
                 query = (
@@ -232,13 +244,13 @@ class DBInterface():
             elif table_name == "New Exercise":
                 query = (
                     "INSERT INTO exercises "
-                    "(TextbookID, ExerciseID, ChapterNumber, SectionNumber, ExerciseNumber, SolutionExists, Seen, Attempts, LastAttempted, LastAttemptTime, Grade, AverageTime, Tags, UnmaskedExercisePath, MaskedExercisePath, SolutionPath)"
+                    "(TextbookID, ExerciseID, ChapterNumber, SectionNumber, ExerciseNumber, SolutionExists, Seen, Attempts, LastAttempted, LastAttemptTime, Grade, AverageTime, Tags, UnmaskedExercisePath, MaskedExercisePath, SolutionPath) "
                     "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
                 )
             elif table_name == "Textbooks":
                 query = (
                     "INSERT INTO textbooks "
-                    "(TextbookID, Category, Authors, Title, Edition, NumberOfSections, NumberOfSectionsCompleted, NumberOfChapters, NumberOfExercises, NumberOfSolutions)"
+                    "(TextbookID, Category, Authors, Title, Edition, NumberOfSections, NumberOfSectionsCompleted, NumberOfChapters, NumberOfExercises, NumberOfSolutions) "
                     "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
                 )
             elif table_name == "Section":
@@ -282,6 +294,39 @@ class DBInterface():
                     "WHERE TextbookID = '" + parameters[0] + "' "
                     "AND ExerciseID = '" + parameters[1] + "' "
                 )
-
+        elif operation == "Delete":
+            if table_name == "Study List":
+                query = (
+                    "DELETE "    
+                    "FROM study_lists "
+                    "WHERE StudyListID = '" + parameters[0] + "' "
+                )
         return query
+
+    def executeQuery(self, query_string, parameters, modifying):
+        try:
+            cursor = self.cnx.cursor()
+            if type(parameters) is tuple:
+                cursor.execute(query_string, parameters)
+            else:
+                cursor.execute(query_string)
+            if modifying:
+                self.cnx.commit()
+        except mysql.connector.Error as err:
+            self.counter += 1
+            if self.counter < 5:
+                if err.msg == "MySQL Connection not available":
+                    print("Reconnecting to DB...")
+                    self.connectToDB()
+                    return self.executeQuery(query_string, parameters, modifying)
+                else:
+                    raise err
+            else:
+                raise err
+        else:
+            self.counter = 0
+            return cursor
+
+
+
 

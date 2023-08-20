@@ -10,6 +10,14 @@ OLD_SS_PATH = "C:\\Users\\Stephan\\Downloads\\Old Screenshots"
 TEMP_FC_PATH = os.path.join(OLD_SS_PATH, "Temp Flashcards")
 TXTBK_SOURCE_PATH = "W:\\Textbooks (Local)\\Print List 2"
 
+RESOURCE_PATH = os.path.join(os.getcwd(), "Resources")
+SOUND_WARNING = os.path.join(RESOURCE_PATH, "Sounds", "warning - Universfield from Pixabay.wav")
+SOUND_TICK = os.path.join(RESOURCE_PATH, "Sounds", "tick edited 2 - Universfield from Pixabay.wav")
+SOUND_NEXT = os.path.join(RESOURCE_PATH, "Sounds", "next edited 2 - Universfield from Pixabay.wav")
+DOWN_ARROW = os.path.join(RESOURCE_PATH, "Icons", "down-arrow.svg")
+RIGHT_ARROW = os.path.join(RESOURCE_PATH, "Icons", "right-arrow.svg")
+DRAG_HANDLE = os.path.join(RESOURCE_PATH, "Icons", "drag-handle.svg")
+
 HOSTNAME = "localhost"
 USERNAME = "root"
 DATABASENAME = "ls_data"
@@ -27,10 +35,11 @@ OP_APP_TO_HEAD = "ctrl+shift+alt+5"
 OP_GRID_MODE = "ctrl+shift+alt+6"
 OP_CANCEL = 'esc'
 OP_TWO_COLUMNS = "ctrl+shift+alt+x"
+OP_INC_INDEX = "ctrl+shift+alt+y"
 OP_RESET_IMAGE_LIST = "ctrl+shift+alt+z"
 
-SHAPE_BBOX = 101
-SHAPE_LINE = 111
+SHAPE_BBOX = "BBox"
+SHAPE_LINE = "Line"
 
 ALL_OPs = [OP_SIMPLE,
            OP_APP_TO_LAST,
@@ -65,8 +74,8 @@ BBOX_COLOR = {
     OP_APP_TO_HEAD: TURQUOISE,
 }
 
-COLUMN_LEFT = -0.1
-COLUMN_RIGHT = 0.1
+COLUMN_LEFT = "Left"#-0.1
+COLUMN_RIGHT = "Right"#0.1
 
 
 DEFAULT_SCAN_RADIUS_BBOX = 20  # default: 20
@@ -100,3 +109,9 @@ StudyListPage_page_number = 7
 FlashcardsPage_page_number = 8
 EditFlashcardsPage_page_number = 9
 StudyFlashcardsPage_page_number = 10
+
+UI_BLUE = ""
+NAVY_BLUE = (58, 74, 97)
+DARK_NAVY_BLUE = (49, 63, 83)
+
+

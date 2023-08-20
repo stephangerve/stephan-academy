@@ -1,8 +1,7 @@
 import ElementStyles
 from ContentPages.ClassPage import Page
 from ClassDBInterface import DBInterface
-from UIElements import ButtonElement
-from UIElements import ListElement
+from CustomWidgets.ClassListWidget import ListWidget
 from PyQt5 import QtCore
 from PyQt5.QtWidgets import QPushButton, QLabel, QHBoxLayout, QWidget, QFileDialog, QSpinBox, QTableWidgetItem, QLineEdit, QHeaderView
 from PyQt5.QtGui import QFont, QPixmap, QColor, QCursor
@@ -127,7 +126,7 @@ class AddTextbookPage(Page):
                         else:
                             sections_list.append([self.ui.num_sections_table.cellWidget(i, 0).text(), str(self.ui.num_sections_table.cellWidget(i,1).value())])
                     else:
-                        sections_list.append([self.ui.num_sections_table.cellWidget(i,0).text(), 0])
+                        sections_list.append([self.ui.num_sections_table.cellWidget(i,0).text(), str(0)])
                 add_row = []
                 add_row.append(textbookid)
                 add_row.append(self.ui.category_combo_box.currentText())
@@ -139,7 +138,7 @@ class AddTextbookPage(Page):
                 add_row.append(self.ui.num_chapters_spin_box.value())
                 add_row.append(None)
                 add_row.append(None)
-                self.db_interface.insertEntry("Textbooks", add_row)
+                self.db_interface.insertEntry("Textbooks", tuple(add_row))
                 self.ui.console_text_edit.append(">> Added new textbook to database:")
                 self.ui.console_text_edit.append(">> Category: " + self.ui.category_combo_box.currentText())
                 self.ui.console_text_edit.append(">> Author: " + self.ui.author_line_edit.text())
