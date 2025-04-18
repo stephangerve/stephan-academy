@@ -4,14 +4,14 @@
 ## Tutorial
 
 ### Subjects Page
- ![](Screenshot 2025-04-18 091421.png)
+![](Screenshot_2025-04-18_091421.png)
 ### Textbook Problems Page
- ![](Screenshot 2025-04-18 091648.png)
+ ![](Screenshot_2025-04-18_091648.png)
 ### Exercise Example
- ![](Screenshot 2025-04-18 091805.png)
+ ![](Screenshot_2025-04-18_091805.png)
 ### Flashcards Page
- ![](Screenshot 2025-04-18 091534.png)
+ ![](Screenshot_2025-04-18_091534.png)
 ### Study List Page
- ![](Screenshot 2025-04-18 091503.png)
+ ![](Screenshot_2025-04-18_091503.png)
 ### Exercise Image Extraction Mode
- ![](Screenshot 2025-04-18 091842.png)
+![](Screenshot_2025-04-18_091842.png)
