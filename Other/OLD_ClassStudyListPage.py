@@ -1,6 +1,6 @@
 import ElementStyles
 from ContentPages.ClassPage import Page
-from CustomWidgets.ClassListWidget import ListWidget
+from CustomWidgets.ClassCustomListWidget import ListWidget
 from PyQt5 import QtCore, Qt
 from PyQt5.QtWidgets import QLabel, QHeaderView, QCheckBox, QPushButton, QLineEdit, QListWidgetItem, QAbstractItemView, QListWidget, QSizePolicy, QFrame
 from PyQt5.QtGui import QFont, QCursor, QPixmap, QImage
@@ -30,9 +30,9 @@ class StudyListPage(Page):
         self.count_sort_order = None
         self.progress_sort_order = None
 
-    def objectReferences(self, db_interface, exercise_page):
+    def objectReferences(self, db_interface, practice_page):
         self.db_interface = db_interface
-        self.exercise_page = exercise_page
+        self.practice_page = practice_page
 
 
     def showPage(self):
@@ -279,7 +279,7 @@ class StudyListPage(Page):
         self.selected_section = [sect for sect in self.sl_collections_dict[self.selected_collection][self.selected_study_list]["Sections"] if sect["TextbookID"] == item_widget.children()[3].text() and sect["ChapterNumber"] == item_widget.children()[4].text() and sect["SectionNumber"] == item_widget.children()[5].text()][0]
         exercises = self.selected_section["Exercises"]
         num = int(exercises[0]["ExerciseID"].split(".")[-1])
-        self.exercise_page.showPage(num, exercises)
+        self.practice_page.showPage(num, exercises)
 
     def selectAllSections(self, state):
         for i in range(self.ui.sl_sections_listwidget.count()):
@@ -594,7 +594,7 @@ class StudyListPage(Page):
         for i in reversed(range(self.ui.ex_study_list_tablewidget.rowCount())):
             self.ui.ex_study_list_tablewidget.removeRow(i)
         self.disconnectWidget(self.ui.start_button_2)
-        self.ui.start_button_2.clicked.connect(lambda state, num=num, exercises=self.selected_section["Exercises"]: self.exercise_page.showPage(num, exercises))
+        self.ui.start_button_2.clicked.connect(lambda state, num=num, exercises=self.selected_section["Exercises"]: self.practice_page.showPage(num, exercises))
 
 
     def sortSectionsListBy(self, column):
@@ -677,7 +677,7 @@ class StudyListPage(Page):
                     num = int(exercises[0]["ExerciseID"].split(".")[-1])
                     self.disconnectWidget(self.ui.sl_sections_listwidget.itemWidget(self.ui.sl_sections_listwidget.item(i)).children()[-2])
                     self.disconnectWidget(self.ui.sl_sections_listwidget.itemWidget(self.ui.sl_sections_listwidget.item(i)).children()[1])
-                    self.ui.sl_sections_listwidget.itemWidget(self.ui.sl_sections_listwidget.item(i)).children()[-2].clicked.connect(lambda state, num=num, exercises=exercises: self.exercise_page.showPage(num, exercises))
+                    self.ui.sl_sections_listwidget.itemWidget(self.ui.sl_sections_listwidget.item(i)).children()[-2].clicked.connect(lambda state, num=num, exercises=exercises: self.practice_page.showPage(num, exercises))
                     self.ui.sl_sections_listwidget.itemWidget(self.ui.sl_sections_listwidget.item(i)).children()[1].stateChanged.connect(lambda state, i=i: self.multipleSectionsSelected(self.ui.sl_sections_listwidget.itemWidget(self.ui.sl_sections_listwidget.item(i))))
             self.clearSLSectionActionButtonLayout()
 

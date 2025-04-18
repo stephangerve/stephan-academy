@@ -1,6 +1,6 @@
+from PyQt5 import uic
 import ElementStyles
 from ContentPages.ClassPage import Page
-from CustomWidgets.ClassListWidget import ListWidget
 from PyQt5 import QtCore, Qt
 from PyQt5.QtWidgets import QFrame, QPushButton, QHBoxLayout, QFileDialog, QLabel, QVBoxLayout, QWidget
 from PyQt5.QtGui import QFont, QCursor, QPixmap, QImage
@@ -23,18 +23,18 @@ from datetime import date
 
 class EditFlashcardsPage(Page):
 
-    def __init__(self, ui):
+    def __init__(self, content_pages):
         Page.__init__(self, Config.EditFlashcardsPage_page_number)
-        self.ui = ui
+        uic.loadUi('Resources/UI/edit_flashcards_page.ui', self)
+        self.content_pages = content_pages
         self.flashcards_in_grid = []
         self.imported_flashcards_timer = QTimer()
         self.import_button_frame = None
         self.MAX_COLS = 4
         self.prev_selected_imported_flashcard_widget = None
         self.prev_selected_set_flashcard_widget = None
-        self.set_flashcard_list_elem = ListWidget(self.ui.set_flashcards_listwidget)
-        ElementStyles.regularShadow(self.ui.update_card_frame)
-        ElementStyles.regularShadow(self.ui.delete_card_frame)
+        ElementStyles.regularShadow(self.update_card_frame)
+        ElementStyles.regularShadow(self.delete_card_frame)
 
     def objectReferences(self, db_interface, flashcards_page, study_flashcards_page, selected_collection_txtbk):
         self.db_interface = db_interface
@@ -46,8 +46,8 @@ class EditFlashcardsPage(Page):
         self.selected_collection = selected_collection
         self.selected_flashcard_set = selected_flashcard_set
         self.selected_collection_txtbk = selected_collection_txtbk
-        self.ui.content_pages.setCurrentIndex(self.page_number)
-        self.ui.exit_edit_ex_page_button.clicked.connect(lambda: self.exitPage())
+        self.content_pages.setCurrentIndex(self.page_number)
+        self.exit_edit_ex_page_button.clicked.connect(lambda: self.exitPage())
         if self.selected_collection_txtbk["Edition"] == "1st":
             txtbk_dirname = " - ".join([self.selected_collection_txtbk["Authors"], self.selected_collection_txtbk["Title"]])
         else:
@@ -74,11 +74,11 @@ class EditFlashcardsPage(Page):
         if self.prev_selected_set_flashcard_widget is not None:
             ElementStyles.unselectedListItem(self.prev_selected_set_flashcard_widget)
         self.prev_selected_set_flashcard_widget = None
-        self.ui.flashcard_front_png_label.clear()
-        self.ui.flashcard_back_png_label.clear()
-        self.ui.add_fc_to_set_button.clicked.connect(lambda: self.addFlashcardsToSet())
+        self.flashcard_front_png_label.clear()
+        self.flashcard_back_png_label.clear()
+        self.add_fc_to_set_button.clicked.connect(lambda: self.addFlashcardsToSet())
         try:
-            self.ui.set_flashcards_listwidget.itemClicked.disconnect()
+            self.set_flashcards_listwidget.itemClicked.disconnect()
         except:
             pass
         self.updateSetFlashcardsListWidget()
@@ -87,35 +87,35 @@ class EditFlashcardsPage(Page):
 
 
     def exitPage(self):
-        self.ui.content_pages.setCurrentIndex(self.flashcards_page.page_number)
+        self.content_pages.setCurrentIndex(self.flashcards_page.page_number)
         return
 
     def setFlashcardEntryClicked(self, listwidgetitem):
-        listwidgetitem_widgets = self.ui.set_flashcards_listwidget.itemWidget(listwidgetitem).children()
+        listwidgetitem_widgets = self.set_flashcards_listwidget.itemWidget(listwidgetitem).children()
 
         filename_front = os.path.join(self.flashcard_set_dir, listwidgetitem_widgets[1].text().split(" ")[-1] + " - flashcard _front.png")
         qpixmap_front = QPixmap(filename_front)
-        if qpixmap_front.size().width() > self.ui.png_label.size().width():
-            qpixmap_front = qpixmap_front.scaled(self.ui.png_label.size().width(), qpixmap_front.size().height(), Qt.KeepAspectRatio, transformMode=Qt.SmoothTransformation)
-        self.ui.flashcard_front_png_label.setPixmap(qpixmap_front)
-        self.ui.flashcard_front_png_label.setWindowFlags(Qt.FramelessWindowHint)
-        self.ui.flashcard_front_png_label.setAttribute(Qt.WA_TranslucentBackground)
-        ElementStyles.regularShadow(self.ui.flashcard_front_png_label)
+        if qpixmap_front.size().width() > self.flashcard_front_png_label.size().width():
+            qpixmap_front = qpixmap_front.scaled(self.png_label.size().width(), qpixmap_front.size().height(), Qt.KeepAspectRatio, transformMode=Qt.SmoothTransformation)
+        self.flashcard_front_png_label.setPixmap(qpixmap_front)
+        self.flashcard_front_png_label.setWindowFlags(Qt.FramelessWindowHint)
+        self.flashcard_front_png_label.setAttribute(Qt.WA_TranslucentBackground)
+        ElementStyles.regularShadow(self.flashcard_front_png_label)
 
         filename_back = os.path.join(self.flashcard_set_dir, listwidgetitem_widgets[1].text().split(" ")[-1] + " - flashcard back.png")
         qpixmap_back = QPixmap(filename_back)
-        if qpixmap_back.size().width() > self.ui.png_label.size().width():
-            qpixmap_back = qpixmap_back.scaled(self.ui.png_label.size().width(), qpixmap_back.size().height(), Qt.KeepAspectRatio, transformMode=Qt.SmoothTransformation)
-        self.ui.flashcard_back_png_label.setPixmap(qpixmap_back)
-        self.ui.flashcard_back_png_label.setWindowFlags(Qt.FramelessWindowHint)
-        self.ui.flashcard_back_png_label.setAttribute(Qt.WA_TranslucentBackground)
-        ElementStyles.regularShadow(self.ui.flashcard_back_png_label)
+        if qpixmap_back.size().width() > self.png_label.size().width():
+            qpixmap_back = qpixmap_back.scaled(self.png_label.size().width(), qpixmap_back.size().height(), Qt.KeepAspectRatio, transformMode=Qt.SmoothTransformation)
+        self.flashcard_back_png_label.setPixmap(qpixmap_back)
+        self.flashcard_back_png_label.setWindowFlags(Qt.FramelessWindowHint)
+        self.flashcard_back_png_label.setAttribute(Qt.WA_TranslucentBackground)
+        ElementStyles.regularShadow(self.flashcard_back_png_label)
 
 
-        ElementStyles.selectedListItem(self.ui.set_flashcards_listwidget.itemWidget(listwidgetitem))
+        ElementStyles.selectedListItem(self.set_flashcards_listwidget.itemWidget(listwidgetitem))
         if self.prev_selected_set_flashcard_widget is not None:
             ElementStyles.unselectedListItem(self.prev_selected_set_flashcard_widget)
-        self.prev_selected_set_flashcard_widget = self.ui.set_flashcards_listwidget.itemWidget(listwidgetitem)
+        self.prev_selected_set_flashcard_widget = self.set_flashcards_listwidget.itemWidget(listwidgetitem)
 
         if self.prev_selected_imported_flashcard_widget is not None:
             ElementStyles.unselectedListItem(self.prev_selected_imported_flashcard_widget)
@@ -125,8 +125,8 @@ class EditFlashcardsPage(Page):
 
     def updateSetFlashcardsListWidget(self):
         self.set_flashcards = self.db_interface.fetchEntries("Flashcards", [self.selected_collection["CollectionID"], self.selected_flashcard_set["SetID"]])
-        self.set_flashcard_list_elem.setList("Set Flashcards", self.set_flashcards)
-        self.ui.set_flashcards_listwidget.itemClicked.connect(lambda: self.setFlashcardEntryClicked(self.ui.set_flashcards_listwidget.currentItem()))
+        self.set_flashcards_listwidget.setList("Set Flashcards", self.set_flashcards)
+        self.set_flashcards_listwidget.itemClicked.connect(lambda: self.setFlashcardEntryClicked(self.set_flashcards_listwidget.currentItem()))
 
 
 
@@ -154,21 +154,21 @@ class EditFlashcardsPage(Page):
             self.clearImagesGrid()
             docx_file = list(filepath)[0]
             doc = docx.Document(docx_file)
-            flashcardIDs = []
+            flashcard_numbers = []
             for page in doc.sections:
-                flashcardID = page.footer.paragraphs[0].text.split('\t\t')[-1]
-                if flashcardID not in flashcardIDs:
-                    flashcardIDs.append(flashcardID)
+                flashcard_number = page.footer.paragraphs[0].text.split('\t\t')[-1]
+                if flashcard_number not in flashcard_numbers and flashcard_number != '':
+                    flashcard_numbers.append(flashcard_number)
             temp_pdf_path = docx_file.split("\\")[-1].split(".docx")[0] + ".pdf"
             if not os.path.exists(temp_pdf_path):
                 docx2pdf.convert(docx_file, temp_pdf_path)
-            images = pdf2image.convert_from_path(temp_pdf_path, 400, size=(500, 300))
+            images = pdf2image.convert_from_path(temp_pdf_path, 400, size=(900, 400))
             idx = 0
             for i in range(len(images)):
                 if (i + 1) % 2 != 0:
-                    png_name = os.path.join(Config.TEMP_FC_PATH, str(flashcardIDs[idx]).zfill(3) + " - flashcard _front.png")
+                    png_name = os.path.join(Config.TEMP_FC_PATH, str(flashcard_numbers[idx]).zfill(3) + " - flashcard _front.png")
                 else:
-                    png_name = os.path.join(Config.TEMP_FC_PATH, str(flashcardIDs[idx]).zfill(3) + " - flashcard back.png")
+                    png_name = os.path.join(Config.TEMP_FC_PATH, str(flashcard_numbers[idx]).zfill(3) + " - flashcard back.png")
                     idx += 1
                 if not os.path.exists(os.path.join(Config.TEMP_FC_PATH, png_name)):
                     images[i].save(os.path.join(Config.TEMP_FC_PATH, png_name))
@@ -212,7 +212,7 @@ class EditFlashcardsPage(Page):
         vlayout.setContentsMargins(5, 5, 5, 5)
         vlayout.addWidget(pic_front_back_frame)
 
-        fn_label = QLabel("Flashcard " + file_dict["FlashcardID"])
+        fn_label = QLabel("Flashcard " + file_dict["FlashcardNumber"])
         fn_label.setFixedSize(widget_width, 20)
         fn_label.setAlignment(Qt.AlignCenter)
         fn_label.setWindowFlags(Qt.FramelessWindowHint)
@@ -238,17 +238,17 @@ class EditFlashcardsPage(Page):
                 self.clearImagesGrid()
             flashcard_temp_files = {}
             for file in os.listdir(Config.TEMP_FC_PATH):
-                flashcard_id = file.split(" ")[0]
-                if flashcard_id not in flashcard_temp_files.keys():
-                    flashcard_temp_files[flashcard_id] = {"Front": None, "Back": None, "FlashcardID": flashcard_id}
+                flashcard_number = int(file.split(" ")[0])
+                if flashcard_number not in flashcard_temp_files.keys():
+                    flashcard_temp_files[flashcard_number] = {"Front": None, "Back": None, "FlashcardNumber": flashcard_number}
                 if "_front" in file:
-                    flashcard_temp_files[flashcard_id]["Front"] = file
+                    flashcard_temp_files[flashcard_number]["Front"] = file
                 elif "back" in file:
-                    flashcard_temp_files[flashcard_id]["Back"] = file
+                    flashcard_temp_files[flashcard_number]["Back"] = file
             count = len(flashcard_temp_files.keys())
-            self.ui.imported_flashcard_label.setText("Imported Cards: " + str(count))
+            self.imported_flashcard_label.setText("Imported Cards: " + str(count))
             if (len(flashcard_temp_files) - len(self.flashcards_in_grid)) > 0:
-                [self.flashcards_in_grid.append(flashcard_temp_files[id]) for id in flashcard_temp_files if flashcard_temp_files[id] not in self.flashcards_in_grid]
+                [self.flashcards_in_grid.append(flashcard_temp_files[num]) for num in flashcard_temp_files if flashcard_temp_files[id] not in self.flashcards_in_grid]
                 if count % self.MAX_COLS == 0:
                     rows = int(count / self.MAX_COLS)
                 else:
@@ -266,15 +266,15 @@ class EditFlashcardsPage(Page):
                         self.grid_col_start_idx = j
                         file_dict = flashcard_temp_files[list(flashcard_temp_files.keys())[index]]
                         widget = self.extractedImageWidget(file_dict)
-                        self.ui.imported_flashcards_gridlayout.addWidget(widget, i, j)
+                        self.imported_flashcards_gridlayout.addWidget(widget, i, j)
                     if self.grid_col_start_idx == self.MAX_COLS - 1:
                         self.grid_col_start_idx = 0
                 self.grid_col_start_idx += 1
         elif len(temp_files) == 0:
             if self.import_button_frame is None:
                 self.clearImagesGrid()
-                self.ui.flashcard_front_png_label.clear()
-                self.ui.flashcard_back_png_label.clear()
+                self.flashcard_front_png_label.clear()
+                self.flashcard_back_png_label.clear()
                 self.prev_selected_imported_flashcard_widget = None
                 self.import_button_frame = QFrame()
                 self.import_button_frame.setFixedWidth(1100)
@@ -294,31 +294,31 @@ class EditFlashcardsPage(Page):
                 layout.setContentsMargins(0, 0, 0, 0)
                 layout.addWidget(import_button)
                 self.import_button_frame.setLayout(layout)
-                self.ui.imported_flashcards_gridlayout.addWidget(self.import_button_frame, 0, 0)
+                self.imported_flashcards_gridlayout.addWidget(self.import_button_frame, 0, 0)
 
     def clearImagesGrid(self):
         self.flashcards_in_grid.clear()
-        for i in reversed(range(self.ui.imported_flashcards_gridlayout.count())):
-            self.ui.imported_flashcards_gridlayout.itemAt(i).widget().setParent(None)
+        for i in reversed(range(self.imported_flashcards_gridlayout.count())):
+            self.imported_flashcards_gridlayout.itemAt(i).widget().setParent(None)
 
     def importedFlashcardEntryClicked(self, widget):
         filename_front = [flashcard["Front"] for flashcard in self.flashcards_in_grid if flashcard["FlashcardID"] == widget.children()[2].text().split(" ")[1]][0]
         qpixmap_front = QPixmap(os.path.join(Config.TEMP_FC_PATH, filename_front))
-        if qpixmap_front.size().width() > self.ui.png_label.size().width():
-            qpixmap_front = qpixmap_front.scaled(self.ui.png_label.size().width(), qpixmap_front.size().height(), Qt.KeepAspectRatio, transformMode=Qt.SmoothTransformation)
-        self.ui.flashcard_front_png_label.setPixmap(qpixmap_front)
-        self.ui.flashcard_front_png_label.setWindowFlags(Qt.FramelessWindowHint)
-        self.ui.flashcard_front_png_label.setAttribute(Qt.WA_TranslucentBackground)
-        ElementStyles.regularShadow(self.ui.flashcard_front_png_label)
+        if qpixmap_front.size().width() > self.png_label.size().width():
+            qpixmap_front = qpixmap_front.scaled(self.png_label.size().width(), qpixmap_front.size().height(), Qt.KeepAspectRatio, transformMode=Qt.SmoothTransformation)
+        self.flashcard_front_png_label.setPixmap(qpixmap_front)
+        self.flashcard_front_png_label.setWindowFlags(Qt.FramelessWindowHint)
+        self.flashcard_front_png_label.setAttribute(Qt.WA_TranslucentBackground)
+        ElementStyles.regularShadow(self.flashcard_front_png_label)
 
         filename_back = [flashcard["Back"] for flashcard in self.flashcards_in_grid if flashcard["FlashcardID"] == widget.children()[2].text().split(" ")[1]][0]
         qpixmap_back = QPixmap(os.path.join(Config.TEMP_FC_PATH, filename_back))
-        if qpixmap_back.size().width() > self.ui.png_label.size().width():
-            qpixmap_back = qpixmap_back.scaled(self.ui.png_label.size().width(), qpixmap_back.size().height(), Qt.KeepAspectRatio, transformMode=Qt.SmoothTransformation)
-        self.ui.flashcard_back_png_label.setPixmap(qpixmap_back)
-        self.ui.flashcard_back_png_label.setWindowFlags(Qt.FramelessWindowHint)
-        self.ui.flashcard_back_png_label.setAttribute(Qt.WA_TranslucentBackground)
-        ElementStyles.regularShadow(self.ui.flashcard_back_png_label)
+        if qpixmap_back.size().width() > self.png_label.size().width():
+            qpixmap_back = qpixmap_back.scaled(self.png_label.size().width(), qpixmap_back.size().height(), Qt.KeepAspectRatio, transformMode=Qt.SmoothTransformation)
+        self.flashcard_back_png_label.setPixmap(qpixmap_back)
+        self.flashcard_back_png_label.setWindowFlags(Qt.FramelessWindowHint)
+        self.flashcard_back_png_label.setAttribute(Qt.WA_TranslucentBackground)
+        ElementStyles.regularShadow(self.flashcard_back_png_label)
 
         ElementStyles.selectedListItem(widget)
         if self.prev_selected_imported_flashcard_widget is not None:

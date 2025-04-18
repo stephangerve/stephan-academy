@@ -110,8 +110,9 @@ class ImageExtractor:
         cv2.namedWindow("image", cv2.WND_PROP_FULLSCREEN)
         cv2.setWindowProperty("image", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
         cv2.setWindowProperty("image", cv2.WND_PROP_TOPMOST, 1)
-        screen = screeninfo.get_monitors()[0]
+        screen = screeninfo.get_monitors()[Config.MONITOR_TO_SHOW_IM]
         cv2.moveWindow("image", screen.x - 1, screen.y - 1)
+        cv2.resizeWindow("image", screen.width, screen.height)
         condition, one_column_boundary_set, two_columns_boundary_set = self.drawOuterBoundary(one_column_boundary_set, two_columns_boundary_set, setted_outer_boundary)
         if condition:
             self.bboxes = {}
@@ -155,9 +156,9 @@ class ImageExtractor:
         cv2.namedWindow("image", cv2.WND_PROP_FULLSCREEN)
         cv2.setWindowProperty("image", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
         cv2.setWindowProperty("image", cv2.WND_PROP_TOPMOST, 1)
-        screen = screeninfo.get_monitors()[0]
+        screen = screeninfo.get_monitors()[Config.MONITOR_TO_SHOW_IM]
         cv2.moveWindow("image", screen.x - 1, screen.y - 1)
-
+        cv2.resizeWindow("image", screen.width, screen.height)
         condition, one_column_boundary_set, two_columns_boundary_set = self.drawOuterBoundary(one_column_boundary_set, two_columns_boundary_set, setted_outer_boundary)
         if condition:
             condition, one_column_boundary_set, two_columns_boundary_set = self.drawColumnLine(one_column_boundary_set, two_columns_boundary_set, setted_outer_boundary)

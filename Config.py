@@ -25,7 +25,9 @@ with open("C:\\Users\\Stephan\\Downloads\\db.txt") as file:
     PASSWORD = file.read()
     file.close()
 
-MONITOR_NUMBER = 1
+MONITOR_NUMBER = 5
+MONITOR_TO_SHOW_IM = 4 #may be different from MONITOR_NUMBER
+
 
 OP_SIMPLE = "ctrl+shift+alt+1"
 OP_APP_TO_LAST = "ctrl+shift+alt+2"

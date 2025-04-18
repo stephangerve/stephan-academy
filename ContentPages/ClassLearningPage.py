@@ -1,6 +1,6 @@
+from PyQt5 import uic
 import ElementStyles
 from ContentPages.ClassPage import Page
-from CustomWidgets.ClassListWidget import ListWidget
 from PyQt5 import QtCore
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QPushButton, QLabel, QHBoxLayout, QWidget, QHeaderView, QCheckBox, QApplication, QListWidget
@@ -13,7 +13,7 @@ class LearningPage(Page):
     ui = None
     db_interface = None
     exercise_page = None
-    category_page = None
+    categories_page = None
     #query_table_names = None
     #table_index = None
     category_textbooks = None
@@ -29,13 +29,12 @@ class LearningPage(Page):
     selected_sect_num = None
 
 
-    def __init__(self, ui, ):
+    def __init__(self, content_pages):
         Page.__init__(self, Config.LearningPage_page_number)
-        self.ui = ui
+        uic.loadUi('Resources/UI/learning_page.ui', self)
+        self.content_pages = content_pages
         #self.query_table_names = ["Textbooks", "Sections", "Exercises"]
         #self.table_index = 0
-        self.textbooks_list_element = ListWidget(self.ui.textbooks_listwidget)
-        self.sections_list_element = ListWidget(self.ui.sections_listwidget)
         self.prev_selected_exercise_num = None
         self.prev_selected_exercise_bgcolor = None
         self.prev_textbook_lw_index = None
@@ -49,10 +48,10 @@ class LearningPage(Page):
         self.progress_sort_order = None
 
 
-    def objectReferences(self, db_interface, exercise_page, category_page, add_textbook_page, add_exercises_page, add_to_study_list_page):
-        self.exercise_page = exercise_page
+    def objectReferences(self, db_interface, practice_page, categories_page, add_textbook_page, add_exercises_page, add_to_study_list_page):
+        self.practice_page = practice_page
         self.db_interface = db_interface
-        self.category_page = category_page
+        self.categories_page = categories_page
         self.add_textbook_page = add_textbook_page
         self.add_exercises_page = add_exercises_page
         self.add_to_study_list_page = add_to_study_list_page
@@ -61,36 +60,36 @@ class LearningPage(Page):
 
     def showPage(self, cat_str):
         self.clearPage()
-        ElementStyles.regularShadow(self.ui.textbook_info_frame_left)
-        ElementStyles.regularShadow(self.ui.ex_stats_info)
-        ElementStyles.regularShadow(self.ui.sb_frame)
-        ElementStyles.lightShadow(self.ui.start_button)
-        ElementStyles.regularShadow(self.ui.mode_frame)
-        ElementStyles.regularShadow(self.ui.grade_filter_frame)
-        ElementStyles.regularShadow(self.ui.sl_frame)
-        self.ui.sb_frame.setStyleSheet("background-color: grey")
-        self.ui.start_button.setStyleSheet("color: black")
-        self.ui.start_button.setEnabled(False)
+        ElementStyles.regularShadow(self.textbook_info_frame_left)
+        ElementStyles.regularShadow(self.ex_stats_info)
+        ElementStyles.regularShadow(self.sb_frame)
+        ElementStyles.lightShadow(self.start_button)
+        ElementStyles.regularShadow(self.mode_frame)
+        ElementStyles.regularShadow(self.grade_filter_frame)
+        ElementStyles.regularShadow(self.sl_frame)
+        self.sb_frame.setStyleSheet("background-color: grey")
+        self.start_button.setStyleSheet("color: black")
+        self.start_button.setEnabled(False)
         self.prev_textbook_lw_index = None
         self.prev_section_list_item_widget = None
         self.sections_selected_count = 0
         self.study_lists = self.db_interface.fetchEntries("Study Lists", [])
         self.selected_category = cat_str
         self.category_textbooks = self.db_interface.fetchEntries("Textbooks", [self.selected_category])
-        self.textbooks_list_element.setList("Textbooks", self.category_textbooks)
-        self.disconnectWidget(self.ui.textbooks_listwidget)
-        self.ui.textbooks_listwidget.itemClicked.connect(lambda: self.textbookEntryClicked(int(self.ui.textbooks_listwidget.currentItem().text())))
-        self.disconnectWidget(self.ui.back_button)
-        self.ui.back_button.clicked.connect(lambda: self.category_page.showPage())
-        self.disconnectWidget(self.ui.add_new_textbook_button)
-        self.ui.add_new_textbook_button.clicked.connect(lambda: self.add_textbook_page.showPage(cat_str))
-        self.ui.date_filter_button.clicked.connect(lambda: self.setDateFilter())
+        self.textbooks_listwidget.setList("Textbooks", self.category_textbooks)
+        self.disconnectWidget(self.textbooks_listwidget)
+        self.textbooks_listwidget.itemClicked.connect(lambda: self.textbookEntryClicked(int(self.textbooks_listwidget.currentItem().text())))
+        self.disconnectWidget(self.back_button)
+        self.back_button.clicked.connect(lambda: self.categories_page.showPage())
+        self.disconnectWidget(self.add_new_textbook_button)
+        self.add_new_textbook_button.clicked.connect(lambda: self.add_textbook_page.showPage(cat_str))
+        self.date_filter_button.clicked.connect(lambda: self.setDateFilter())
         self.setDateFilter()
         self.clearSectionActionButtonLayout()
-        self.ui.content_pages.setCurrentIndex(self.page_number)
+        self.content_pages.setCurrentIndex(self.page_number)
 
     def setDateFilter(self):
-        parsed_date = [str(l).zfill(2) if len(str(l)) == 1 else str(l) for l in list(self.ui.date_filter_edit.date().getDate())]
+        parsed_date = [str(l).zfill(2) if len(str(l)) == 1 else str(l) for l in list(self.date_filter_edit.date().getDate())]
         self.date_filter = "/".join([parsed_date[1], parsed_date[2], parsed_date[0]])
         if self.prev_textbook_lw_index is not None:
             self.updateSectionList()
@@ -100,24 +99,24 @@ class LearningPage(Page):
 
     def clearPage(self):
         self.clearExercisesGrid()
-        self.ui.category_info_label.clear()
-        self.ui.textbook_info_label.clear()
-        self.ui.chapter_info_label.clear()
-        self.ui.section_info_label.clear()
-        self.ui.ex_stats_info_grade_label.clear()
-        self.ui.ex_stats_info_lastattempt_label.clear()
-        self.ui.ex_stats_info_totalattempts_label.clear()
-        self.ui.ex_stats_info_averagetime_label.clear()
-        self.textbooks_list_element.clear()
-        self.sections_list_element.clear()
+        self.category_info_label.clear()
+        self.textbook_info_label.clear()
+        self.chapter_info_label.clear()
+        self.section_info_label.clear()
+        self.ex_stats_info_grade_label.clear()
+        self.ex_stats_info_lastattempt_label.clear()
+        self.ex_stats_info_totalattempts_label.clear()
+        self.ex_stats_info_averagetime_label.clear()
+        self.textbooks_listwidget.clear()
+        self.sections_listwidget.clear()
 
     def clearSectionActionButtonLayout(self):
         try: self.add_new_exercises_button.clicked.disconnect()
         except: pass
         try: self.add_new_exercises_button.clicked.disconnect()
         except: pass
-        for i in reversed(range(self.ui.section_action_button_layout.count())):
-            self.ui.section_action_button_layout.itemAt(i).widget().setParent(None)
+        for i in reversed(range(self.section_action_button_layout.count())):
+            self.section_action_button_layout.itemAt(i).widget().setParent(None)
 
 
     def textbookEntryClicked(self, ui_list_index):
@@ -125,16 +124,16 @@ class LearningPage(Page):
         self.SN_sort_order = None
         self.count_sort_order = None
         self.progress_sort_order = None
-        self.ui.sb_frame.setStyleSheet("background-color: gray")
-        self.ui.start_button.setStyleSheet("color: black")
-        self.ui.start_button.setEnabled(False)
-        self.sections_list_element.clear()
-        self.ui.chapter_info_label.clear()
-        self.ui.section_info_label.clear()
+        self.sb_frame.setStyleSheet("background-color: gray")
+        self.start_button.setStyleSheet("color: black")
+        self.start_button.setEnabled(False)
+        self.sections_listwidget.clear()
+        self.chapter_info_label.clear()
+        self.section_info_label.clear()
         self.sections_selected_count = 0
-        ElementStyles.selectedListItem(self.ui.textbooks_listwidget.itemWidget(self.ui.textbooks_listwidget.currentItem()))
+        ElementStyles.selectedListItem(self.textbooks_listwidget.itemWidget(self.textbooks_listwidget.currentItem()))
         if self.prev_textbook_lw_index is not None:
-            ElementStyles.unselectedListItem(self.ui.textbooks_listwidget.itemWidget(self.ui.textbooks_listwidget.item(self.prev_textbook_lw_index)))
+            ElementStyles.unselectedListItem(self.textbooks_listwidget.itemWidget(self.textbooks_listwidget.item(self.prev_textbook_lw_index)))
         self.prev_textbook_lw_index = ui_list_index - 1
         self.prev_section_list_item_widget = None
         self.clearExercisesGrid()
@@ -143,8 +142,8 @@ class LearningPage(Page):
         self.selected_author = self.category_textbooks[ui_list_index - 1]["Authors"]
         self.selected_textbook_title = self.category_textbooks[ui_list_index - 1]["Title"]
         self.selected_edition = self.category_textbooks[ui_list_index - 1]["Edition"]
-        self.ui.category_info_label.setText(str(self.selected_category))
-        self.ui.textbook_info_label.setText(" - ".join([self.selected_author, self.selected_textbook_title, self.selected_edition]))
+        self.category_info_label.setText(str(self.selected_category))
+        self.textbook_info_label.setText(" - ".join([self.selected_author, self.selected_textbook_title, self.selected_edition]))
         QApplication.setOverrideCursor(Qt.WaitCursor)
         self.textbook_exercises = self.db_interface.fetchEntries("Textbook Exercises", [self.selected_textbook_ID])
         if len(self.textbook_exercises) > 0:
@@ -166,32 +165,32 @@ class LearningPage(Page):
                                         key=lambda x: (int(x['ChapterNumber']) if x['ChapterNumber'].isdigit() else 999, int(x['SectionNumber']) if x['SectionNumber'].isdigit() else 999))
         QApplication.restoreOverrideCursor()
         self.updateSectionList()
-        for i in reversed(range(self.ui.ex_study_list_tablewidget.rowCount())):
-            self.ui.ex_study_list_tablewidget.removeRow(i)
-        self.disconnectWidget(self.ui.sections_listwidget)
-        self.ui.sections_listwidget.itemClicked.connect(lambda: self.sectionsEntryClicked(self.ui.sections_listwidget.itemWidget(self.ui.sections_listwidget.currentItem())))
+        for i in reversed(range(self.ex_study_list_tablewidget.rowCount())):
+            self.ex_study_list_tablewidget.removeRow(i)
+        self.disconnectWidget(self.sections_listwidget)
+        self.sections_listwidget.itemClicked.connect(lambda: self.sectionsEntryClicked(self.sections_listwidget.itemWidget(self.sections_listwidget.currentItem())))
         if len(self.textbook_exercises) > 0:
-            for i in range(self.ui.sections_listwidget.count()):
+            for i in range(self.sections_listwidget.count()):
                 chap_num = self.textbook_sections[i]["ChapterNumber"]
                 sect_num = self.textbook_sections[i]["SectionNumber"]
                 exercises = [entry for entry in self.textbook_exercises if entry["ChapterNumber"] == chap_num and entry["SectionNumber"] == sect_num]
                 if len(exercises) > 0:
                     num = int(exercises[0]["ExerciseID"].split(".")[-1])
-                    self.ui.sections_listwidget.itemWidget(self.ui.sections_listwidget.item(i)).children()[-3].clicked.connect(lambda state, num=num, exercises=exercises: self.exercise_page.showPage(num, exercises))
-                    self.ui.sections_listwidget.itemWidget(self.ui.sections_listwidget.item(i)).children()[-1].clicked.connect(lambda state, exercises_to_be_added=exercises: self.add_to_study_list_page.showPage(exercises_to_be_added))
-                    self.ui.sections_listwidget.itemWidget(self.ui.sections_listwidget.item(i)).children()[1].stateChanged.connect(lambda state, i=i: self.multipleSectionsSelected(self.ui.sections_listwidget.itemWidget(self.ui.sections_listwidget.item(i))))
+                    self.sections_listwidget.itemWidget(self.sections_listwidget.item(i)).children()[-3].clicked.connect(lambda state, num=num, exercises=exercises: self.practice_page.showPage(num, exercises))
+                    self.sections_listwidget.itemWidget(self.sections_listwidget.item(i)).children()[-1].clicked.connect(lambda state, exercises_to_be_added=exercises: self.add_to_study_list_page.showPage(exercises_to_be_added))
+                    self.sections_listwidget.itemWidget(self.sections_listwidget.item(i)).children()[1].stateChanged.connect(lambda state, i=i: self.multipleSectionsSelected(self.sections_listwidget.itemWidget(self.sections_listwidget.item(i))))
         self.addButtonsToSectionActionButtonsLayout()
-        self.disconnectWidget(self.ui.select_all_sections_checkbox)
-        self.disconnectWidget(self.ui.CN_sort_button)
-        self.disconnectWidget(self.ui.SN_sort_button)
-        self.disconnectWidget(self.ui.count_sort_button)
-        self.disconnectWidget(self.ui.progress_sort_button)
-        self.ui.select_all_sections_checkbox.setCheckState(False)
-        self.ui.select_all_sections_checkbox.stateChanged.connect(lambda: self.selectAllSections(self.ui.select_all_sections_checkbox.checkState()))
-        self.ui.CN_sort_button.clicked.connect(lambda: self.sortSectionsListBy("ChapterNumber"))
-        self.ui.SN_sort_button.clicked.connect(lambda: self.sortSectionsListBy("SectionNumber"))
-        self.ui.count_sort_button.clicked.connect(lambda: self.sortSectionsListBy("Count"))
-        self.ui.progress_sort_button.clicked.connect(lambda: self.sortSectionsListBy("Progress"))
+        self.disconnectWidget(self.select_all_sections_checkbox)
+        self.disconnectWidget(self.CN_sort_button)
+        self.disconnectWidget(self.SN_sort_button)
+        self.disconnectWidget(self.count_sort_button)
+        self.disconnectWidget(self.progress_sort_button)
+        self.select_all_sections_checkbox.setCheckState(False)
+        self.select_all_sections_checkbox.stateChanged.connect(lambda: self.selectAllSections(self.select_all_sections_checkbox.checkState()))
+        self.CN_sort_button.clicked.connect(lambda: self.sortSectionsListBy("ChapterNumber"))
+        self.SN_sort_button.clicked.connect(lambda: self.sortSectionsListBy("SectionNumber"))
+        self.count_sort_button.clicked.connect(lambda: self.sortSectionsListBy("Count"))
+        self.progress_sort_button.clicked.connect(lambda: self.sortSectionsListBy("Progress"))
 
 
     def addButtonsToSectionActionButtonsLayout(self):
@@ -200,20 +199,20 @@ class LearningPage(Page):
             self.add_sections_button = QPushButton("Add Sections")
             self.add_sections_button.setCursor(Qt.PointingHandCursor)
             self.add_sections_button.setStyleSheet("color: white")
-        self.ui.section_action_button_layout.addWidget(self.add_sections_button)
+        self.section_action_button_layout.addWidget(self.add_sections_button)
         self.disconnectWidget(self.add_sections_button)
         if self.add_new_exercises_button is None:
             self.add_new_exercises_button = QPushButton("Add New Exercises")
             self.add_new_exercises_button.setCursor(Qt.PointingHandCursor)
             self.add_new_exercises_button.setStyleSheet("color: white")
-        self.ui.section_action_button_layout.addWidget(self.add_new_exercises_button)
+        self.section_action_button_layout.addWidget(self.add_new_exercises_button)
         self.disconnectWidget(self.add_new_exercises_button)
         self.add_new_exercises_button.clicked.connect(lambda: self.add_exercises_page.showPage(self.textbook_sections, self.selected_textbook_ID, self.selected_category, self.selected_author, self.selected_textbook_title, self.selected_edition))
 
 
     def selectAllSections(self, state):
-        for i in range(self.ui.sections_listwidget.count()):
-            item_widget = self.ui.sections_listwidget.itemWidget(self.ui.sections_listwidget.item(i))
+        for i in range(self.sections_listwidget.count()):
+            item_widget = self.sections_listwidget.itemWidget(self.sections_listwidget.item(i))
             self.disconnectWidget(item_widget.children()[1])
             if state:
                 if not item_widget.children()[1].isChecked():
@@ -230,14 +229,15 @@ class LearningPage(Page):
         if self.sections_selected_count > 0:
             self.clearSectionActionButtonLayout()
             if self.add_sections_to_sl_button is None:
-                self.add_sections_to_sl_button = QPushButton("Add Sections to Study List")
+                self.add_sections_to_sl_button = QPushButton()
                 self.add_sections_to_sl_button.setCursor(Qt.PointingHandCursor)
                 self.add_sections_to_sl_button.setStyleSheet("color: white")
-            self.ui.section_action_button_layout.addWidget(self.add_sections_to_sl_button)
+            self.add_sections_to_sl_button.setText("Add " + str(self.sections_selected_count) + " Section(s) to a Study List")
+            self.section_action_button_layout.addWidget(self.add_sections_to_sl_button)
             self.disconnectWidget(self.add_sections_to_sl_button)
             exercises = []
-            for i in range(self.ui.sections_listwidget.count()):
-                item_widget = self.ui.sections_listwidget.itemWidget(self.ui.sections_listwidget.item(i))
+            for i in range(self.sections_listwidget.count()):
+                item_widget = self.sections_listwidget.itemWidget(self.sections_listwidget.item(i))
                 if item_widget.children()[1].isChecked():
                     chap_num = item_widget.children()[3].text()
                     sect_num = item_widget.children()[4].text()
@@ -248,7 +248,7 @@ class LearningPage(Page):
 
 
     def multipleSectionsSelected(self, item_widget):
-        if item_widget.children()[1].isChecked() and self.sections_selected_count < self.ui.sections_listwidget.count():
+        if item_widget.children()[1].isChecked() and self.sections_selected_count < self.sections_listwidget.count():
             self.sections_selected_count += 1
             ElementStyles.highlightListItem(item_widget)
         else:
@@ -257,14 +257,15 @@ class LearningPage(Page):
         if self.sections_selected_count > 0:
             self.clearSectionActionButtonLayout()
             if self.add_sections_to_sl_button is None:
-                self.add_sections_to_sl_button = QPushButton("Add Sections to Study List")
+                self.add_sections_to_sl_button = QPushButton()
                 self.add_sections_to_sl_button.setCursor(Qt.PointingHandCursor)
                 self.add_sections_to_sl_button.setStyleSheet("color: white")
-            self.ui.section_action_button_layout.addWidget(self.add_sections_to_sl_button)
+            self.add_sections_to_sl_button.setText("Add " + str(self.sections_selected_count) + " Section(s) to a Study List")
+            self.section_action_button_layout.addWidget(self.add_sections_to_sl_button)
             self.disconnectWidget(self.add_sections_to_sl_button)
             exercises = []
-            for i in range(self.ui.sections_listwidget.count()):
-                item_widget = self.ui.sections_listwidget.itemWidget(self.ui.sections_listwidget.item(i))
+            for i in range(self.sections_listwidget.count()):
+                item_widget = self.sections_listwidget.itemWidget(self.sections_listwidget.item(i))
                 if item_widget.children()[1].isChecked():
                     chap_num = item_widget.children()[3].text()
                     sect_num = item_widget.children()[4].text()
@@ -300,21 +301,21 @@ class LearningPage(Page):
                             sect_entry["NoGrade"] += 1
                     elif entry["SolutionExists"] == 'True':
                         sect_entry["NoGrade"] += 1
-        self.sections_list_element.setList("Sections", self.textbook_sections)
+        self.sections_listwidget.setList("Sections", self.textbook_sections)
 
         if self.prev_section_list_item_widget is not None:
-            for i in range(self.ui.sections_listwidget.count()):
-                if self.ui.sections_listwidget.itemWidget(self.ui.sections_listwidget.item(i)).children()[3].text() == self.prev_section_list_item_widget.children()[3].text():
-                    if self.ui.sections_listwidget.itemWidget(self.ui.sections_listwidget.item(i)).children()[4].text() == self.prev_section_list_item_widget.children()[4].text():
-                        if self.ui.sections_listwidget.itemWidget(self.ui.sections_listwidget.item(i)).children()[5].text() == self.prev_section_list_item_widget.children()[5].text():
-                            self.prev_section_list_item_widget = self.ui.sections_listwidget.itemWidget(self.ui.sections_listwidget.item(i))
+            for i in range(self.sections_listwidget.count()):
+                if self.sections_listwidget.itemWidget(self.sections_listwidget.item(i)).children()[3].text() == self.prev_section_list_item_widget.children()[3].text():
+                    if self.sections_listwidget.itemWidget(self.sections_listwidget.item(i)).children()[4].text() == self.prev_section_list_item_widget.children()[4].text():
+                        if self.sections_listwidget.itemWidget(self.sections_listwidget.item(i)).children()[5].text() == self.prev_section_list_item_widget.children()[5].text():
+                            self.prev_section_list_item_widget = self.sections_listwidget.itemWidget(self.sections_listwidget.item(i))
                             break
             self.sectionsEntryClicked(self.prev_section_list_item_widget)
 
     def sectionsEntryClicked(self, item_widget):
-        self.ui.sb_frame.setStyleSheet("background-color: gray")
-        self.ui.start_button.setStyleSheet("color: black")
-        self.ui.start_button.setEnabled(False)
+        self.sb_frame.setStyleSheet("background-color: gray")
+        self.start_button.setStyleSheet("color: black")
+        self.start_button.setEnabled(False)
         if self.prev_section_list_item_widget is not None:
             if self.prev_section_list_item_widget.children()[1].isChecked():
                 ElementStyles.highlightListItem(self.prev_section_list_item_widget)
@@ -327,20 +328,20 @@ class LearningPage(Page):
         #self.selected_exercises = self.db_interface.fetchEntries("Exercises", [self.selected_textbook_ID, self.selected_chap_num, self.selected_sect_num])
         self.selected_exercises = [entry for entry in self.textbook_exercises if entry["ChapterNumber"] == self.selected_chap_num and entry["SectionNumber"] == self.selected_sect_num]
         self.setExercisesButtons()
-        for i in reversed(range(self.ui.ex_study_list_tablewidget.rowCount())):
-            self.ui.ex_study_list_tablewidget.removeRow(i)
+        for i in reversed(range(self.ex_study_list_tablewidget.rowCount())):
+            self.ex_study_list_tablewidget.removeRow(i)
 
 
 
     def clearExercisesGrid(self):
-        for i in reversed(range(self.ui.exercises_grid.count())):
-            self.ui.exercises_grid.itemAt(i).widget().setParent(None)
+        for i in reversed(range(self.exercises_grid.count())):
+            self.exercises_grid.itemAt(i).widget().setParent(None)
 
     def setExercisesButtons(self):
         self.prev_selected_exercise_num = None
         self.clearExercisesGrid()
-        self.ui.chapter_info_label.setText(str(self.selected_chap_num))
-        self.ui.section_info_label.setText(str(self.selected_sect_num))
+        self.chapter_info_label.setText(str(self.selected_chap_num))
+        self.section_info_label.setText(str(self.selected_sect_num))
         count = len(self.selected_exercises)
         if count > 0:
             if count % 10 == 0:
@@ -383,7 +384,7 @@ class LearningPage(Page):
                         self.button.toggle()
                         self.button.setEnabled(False)
                     self.button.setStyleSheet("background-color : " + color)
-                    self.ui.exercises_grid.addWidget(self.button, i, j)
+                    self.exercises_grid.addWidget(self.button, i, j)
         else:
             label = QLabel("\n\n\n\n\nNo Exercises!")
             color = "white"
@@ -391,74 +392,74 @@ class LearningPage(Page):
             label.setAlignment(QtCore.Qt.AlignCenter)
             label.setFont(QFont("Arial", 12))
             label.resize(60, 80)
-            self.ui.exercises_grid.addWidget(label, 0, 0)
+            self.exercises_grid.addWidget(label, 0, 0)
 
     def showExerciseStats(self, num):
-        self.ui.sb_frame.setStyleSheet("background-color: rgb(0, 170, 127)")
-        self.ui.start_button.setStyleSheet("color: white")
-        self.ui.start_button.setEnabled(True)
+        self.sb_frame.setStyleSheet("background-color: rgb(0, 170, 127)")
+        self.start_button.setStyleSheet("color: white")
+        self.start_button.setEnabled(True)
         if self.prev_selected_exercise_num is not None:
             last_grid_index = [self.selected_exercises.index(entry) for entry in self.selected_exercises if int(entry["ExerciseID"].split(".")[-1]) == self.prev_selected_exercise_num][0]
-            self.ui.exercises_grid.itemAt(last_grid_index).widget().setEnabled(True)
-            self.ui.exercises_grid.itemAt(last_grid_index).widget().toggle()
-            self.ui.exercises_grid.itemAt(last_grid_index).widget().setStyleSheet("background-color : " + self.prev_selected_exercise_bgcolor)
+            self.exercises_grid.itemAt(last_grid_index).widget().setEnabled(True)
+            self.exercises_grid.itemAt(last_grid_index).widget().toggle()
+            self.exercises_grid.itemAt(last_grid_index).widget().setStyleSheet("background-color : " + self.prev_selected_exercise_bgcolor)
         grid_index, self.exercise_stats = [[self.selected_exercises.index(entry), entry] for entry in self.selected_exercises if int(entry["ExerciseID"].split(".")[-1]) == num][0]
         self.prev_selected_exercise_num = num
-        self.ui.exercises_grid.itemAt(grid_index).widget().setEnabled(False)
-        self.ui.exercises_grid.itemAt(grid_index).widget().setStyleSheet("background-color : lightblue")
+        self.exercises_grid.itemAt(grid_index).widget().setEnabled(False)
+        self.exercises_grid.itemAt(grid_index).widget().setStyleSheet("background-color : lightblue")
         if eval(self.exercise_stats["Seen"]) and self.exercise_stats["Attempts"] > 0:
-            self.ui.ex_stats_info_grade_label.setText(str(self.exercise_stats["Grade"]))
-            self.ui.ex_stats_info_lastattempt_label.setText(str(self.exercise_stats["LastAttempted"]) + " -- " + str(self.exercise_stats["LastAttemptTime"]))
-            self.ui.ex_stats_info_totalattempts_label.setText(str(self.exercise_stats["Attempts"]))
-            self.ui.ex_stats_info_averagetime_label.setText(str(self.exercise_stats["AverageTime"]))
+            self.ex_stats_info_grade_label.setText(str(self.exercise_stats["Grade"]))
+            self.ex_stats_info_lastattempt_label.setText(str(self.exercise_stats["LastAttempted"]) + " -- " + str(self.exercise_stats["LastAttemptTime"]))
+            self.ex_stats_info_totalattempts_label.setText(str(self.exercise_stats["Attempts"]))
+            self.ex_stats_info_averagetime_label.setText(str(self.exercise_stats["AverageTime"]))
             if datetime.strptime(self.exercise_stats["LastAttempted"], '%m/%d/%Y').date() >= datetime.strptime(self.date_filter, '%m/%d/%Y').date():
                 self.prev_selected_exercise_bgcolor = "rgb" + str(Config.EXERCISE_GRADE_COLORS[self.exercise_stats["Grade"]])
             else:
                 self.prev_selected_exercise_bgcolor = "gray"
         elif eval(self.exercise_stats["Seen"]) and self.exercise_stats["Attempts"] == 0:
-            self.ui.ex_stats_info_grade_label.setText("N/A")
-            self.ui.ex_stats_info_lastattempt_label.setText("N/A")
-            self.ui.ex_stats_info_totalattempts_label.setText("N/A")
-            self.ui.ex_stats_info_averagetime_label.setText("N/A")
+            self.ex_stats_info_grade_label.setText("N/A")
+            self.ex_stats_info_lastattempt_label.setText("N/A")
+            self.ex_stats_info_totalattempts_label.setText("N/A")
+            self.ex_stats_info_averagetime_label.setText("N/A")
             self.prev_selected_exercise_bgcolor = "gray"
         else:
-            self.ui.ex_stats_info_grade_label.setText("N/A")
-            self.ui.ex_stats_info_lastattempt_label.setText("N/A")
-            self.ui.ex_stats_info_totalattempts_label.setText("N/A")
-            self.ui.ex_stats_info_averagetime_label.setText("N/A")
+            self.ex_stats_info_grade_label.setText("N/A")
+            self.ex_stats_info_lastattempt_label.setText("N/A")
+            self.ex_stats_info_totalattempts_label.setText("N/A")
+            self.ex_stats_info_averagetime_label.setText("N/A")
             self.prev_selected_exercise_bgcolor = "white"
-        for i in reversed(range(self.ui.ex_study_list_tablewidget.rowCount())):
-            self.ui.ex_study_list_tablewidget.removeRow(i)
+        for i in reversed(range(self.ex_study_list_tablewidget.rowCount())):
+            self.ex_study_list_tablewidget.removeRow(i)
         self.setStudyListTable()
-        self.disconnectWidget(self.ui.start_button)
-        self.disconnectWidget(self.ui.add_to_a_study_list_button)
-        self.disconnectWidget(self.ui.remove_from_a_study_list_button)
-        self.ui.start_button.clicked.connect(lambda state, num=num, exercises=self.selected_exercises: self.exercise_page.showPage(num, exercises))
-        self.ui.add_to_a_study_list_button.clicked.connect(lambda state, exercises_to_be_added=[self.exercise_stats]: self.add_to_study_list_page.showPage(exercises_to_be_added))
-        self.ui.remove_from_a_study_list_button.clicked.connect(lambda: self.removeFromStudyList())
+        self.disconnectWidget(self.start_button)
+        self.disconnectWidget(self.add_to_a_study_list_button)
+        self.disconnectWidget(self.remove_from_a_study_list_button)
+        self.start_button.clicked.connect(lambda state, num=num, exercises=self.selected_exercises: self.practice_page.showPage(num, exercises))
+        self.add_to_a_study_list_button.clicked.connect(lambda state, exercises_to_be_added=[self.exercise_stats]: self.add_to_study_list_page.showPage(exercises_to_be_added))
+        self.remove_from_a_study_list_button.clicked.connect(lambda: self.removeFromStudyList())
 
     def setStudyListTable(self):
-        for i in reversed(range(self.ui.ex_study_list_tablewidget.rowCount())):
-            self.ui.ex_study_list_tablewidget.removeRow(i)
-        self.ui.ex_study_list_tablewidget.verticalHeader().setVisible(False)
-        self.ui.ex_study_list_tablewidget.setColumnCount(2)
-        self.ui.ex_study_list_tablewidget.setHorizontalHeaderLabels(["", "Study Lists"])
-        self.ui.ex_study_list_tablewidget.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeToContents)
+        for i in reversed(range(self.ex_study_list_tablewidget.rowCount())):
+            self.ex_study_list_tablewidget.removeRow(i)
+        self.ex_study_list_tablewidget.verticalHeader().setVisible(False)
+        self.ex_study_list_tablewidget.setColumnCount(2)
+        self.ex_study_list_tablewidget.setHorizontalHeaderLabels(["", "Study Lists"])
+        self.ex_study_list_tablewidget.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeToContents)
         if self.exercise_stats["Tags"] is not None and len(self.exercise_stats["Tags"]) != 0:
             ex_study_lists = self.exercise_stats["Tags"].split(",")
             for i in range(len(ex_study_lists)):
-                self.ui.ex_study_list_tablewidget.insertRow(i)
-                self.ui.ex_study_list_tablewidget.setCellWidget(i, 0, QCheckBox())
+                self.ex_study_list_tablewidget.insertRow(i)
+                self.ex_study_list_tablewidget.setCellWidget(i, 0, QCheckBox())
                 study_list_label = [study_list["StudyListName"] for study_list in self.study_lists if study_list["StudyListID"] == ex_study_lists[i]][0]
-                self.ui.ex_study_list_tablewidget.setCellWidget(i, 1, QLabel(study_list_label))
-            self.ui.ex_study_list_tablewidget.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeToContents)
+                self.ex_study_list_tablewidget.setCellWidget(i, 1, QLabel(study_list_label))
+            self.ex_study_list_tablewidget.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeToContents)
 
     def removeFromStudyList(self):
         popped_index = [self.selected_exercises.index(entry) for entry in self.selected_exercises if entry["ExerciseNumber"] == self.exercise_stats["ExerciseNumber"]][0]
         self.selected_exercises.pop(popped_index)
-        for i in range(self.ui.ex_study_list_tablewidget.rowCount()):
-            if self.ui.ex_study_list_tablewidget.cellWidget(i, 0).isChecked():
-                study_list_id = [study_list["StudyListID"] for study_list in self.study_lists if study_list["StudyListName"] == self.ui.ex_study_list_tablewidget.cellWidget(i, 1).text()][0]
+        for i in range(self.ex_study_list_tablewidget.rowCount()):
+            if self.ex_study_list_tablewidget.cellWidget(i, 0).isChecked():
+                study_list_id = [study_list["StudyListID"] for study_list in self.study_lists if study_list["StudyListName"] == self.ex_study_list_tablewidget.cellWidget(i, 1).text()][0]
                 tags = self.exercise_stats["Tags"].split(",")
                 tags.pop(tags.index(study_list_id))
                 if tags is not None:
@@ -525,21 +526,21 @@ class LearningPage(Page):
 
 
 
-        self.sections_list_element.setList("Sections", self.textbook_sections)
-        self.disconnectWidget(self.ui.sections_listwidget)
-        self.ui.sections_listwidget.itemClicked.connect(lambda: self.sectionsEntryClicked(self.ui.sections_listwidget.itemWidget(self.ui.sections_listwidget.currentItem())))
+        self.sections_listwidget.setList("Sections", self.textbook_sections)
+        self.disconnectWidget(self.sections_listwidget)
+        self.sections_listwidget.itemClicked.connect(lambda: self.sectionsEntryClicked(self.sections_listwidget.itemWidget(self.sections_listwidget.currentItem())))
         self.prev_section_list_item_widget = None
         if len(self.textbook_exercises) > 0:
-            for i in range(self.ui.sections_listwidget.count()):
+            for i in range(self.sections_listwidget.count()):
                 chap_num = self.textbook_sections[i]["ChapterNumber"]
                 sect_num = self.textbook_sections[i]["SectionNumber"]
                 exercises = [entry for entry in self.textbook_exercises if entry["ChapterNumber"] == chap_num and entry["SectionNumber"] == sect_num]
                 if len(exercises) > 0:
                     num = int(exercises[0]["ExerciseID"].split(".")[-1])
-                    self.ui.sections_listwidget.itemWidget(self.ui.sections_listwidget.item(i)).children()[-3].clicked.connect(
-                        lambda state, num=num, exercises=exercises: self.exercise_page.showPage(num, exercises))
-                    self.ui.sections_listwidget.itemWidget(self.ui.sections_listwidget.item(i)).children()[-1].clicked.connect(
+                    self.sections_listwidget.itemWidget(self.sections_listwidget.item(i)).children()[-3].clicked.connect(
+                        lambda state, num=num, exercises=exercises: self.practice_page.showPage(num, exercises))
+                    self.sections_listwidget.itemWidget(self.sections_listwidget.item(i)).children()[-1].clicked.connect(
                         lambda state, exercises_to_be_added=exercises: self.add_to_study_list_page.showPage(exercises_to_be_added))
-                    self.ui.sections_listwidget.itemWidget(self.ui.sections_listwidget.item(i)).children()[1].stateChanged.connect(
-                        lambda state, i=i: self.multipleSectionsSelected(self.ui.sections_listwidget.itemWidget(self.ui.sections_listwidget.item(i))))
+                    self.sections_listwidget.itemWidget(self.sections_listwidget.item(i)).children()[1].stateChanged.connect(
+                        lambda state, i=i: self.multipleSectionsSelected(self.sections_listwidget.itemWidget(self.sections_listwidget.item(i))))
             self.addButtonsToSectionActionButtonsLayout()

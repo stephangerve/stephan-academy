@@ -1,16 +1,16 @@
+from PyQt5 import uic
 from ContentPages.ClassPage import Page
 from PyQt5.QtGui import QCursor
 from PyQt5 import QtCore
 import Config
 
 class DashboardPage(Page):
-    ui = None
 
 
-
-    def __init__(self, ui):
+    def __init__(self, content_pages):
         Page.__init__(self, Config.DashboardPage_page_number)
-        self.ui = ui
+        uic.loadUi('Resources/UI/dashboard_page.ui', self)
+        self.content_pages = content_pages
 
 
     def referenceObjects(self):
@@ -18,15 +18,4 @@ class DashboardPage(Page):
 
 
     def showPage(self):
-        self.ui.button_dashboard.setChecked(True)
-        self.ui.button_dashboard.setEnabled(False)
-        self.ui.button_dashboard.setStyleSheet("background-color: rgb(58, 74, 97); color: white")
-        self.ui.button_dashboard.setCursor(QCursor(QtCore.Qt.ArrowCursor))
-        pushbuttons = [self.ui.button_flashcards, self.ui.button_studylist, self.ui.button_learn]
-        for button in pushbuttons:
-            if button.isChecked():
-                button.setChecked(False)
-                button.setEnabled(True)
-                button.setStyleSheet("background-color: #2A4D87; color: white")
-                button.setCursor(QCursor(QtCore.Qt.PointingHandCursor))
-        self.ui.content_pages.setCurrentIndex(self.page_number)
+        self.content_pages.setCurrentIndex(self.page_number)

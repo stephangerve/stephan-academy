@@ -1,7 +1,7 @@
+from PyQt5 import uic
 import ElementStyles
 from ContentPages.ClassPage import Page
 from ClassDBInterface import DBInterface
-from CustomWidgets.ClassListWidget import ListWidget
 from PyQt5 import QtCore
 from PyQt5.QtCore import QTimer
 from PyQt5.QtMultimedia import QSound, QSoundEffect
@@ -16,7 +16,7 @@ import Config
 from datetime import date, timedelta, datetime
 
 
-class ExercisePage(Page):
+class PracticePage(Page):
     ui = None
     exercises = None
     current_exercise = None
@@ -26,15 +26,16 @@ class ExercisePage(Page):
 
 
 
-    def __init__(self, ui):
+    def __init__(self, content_pages):
         Page.__init__(self, Config.ExercisePage_page_number)
-        self.ui = ui
+        uic.loadUi('Resources/UI/practice_page.ui', self)
+        self.content_pages = content_pages
         self.initUI()
 
 
     def initUI(self):
-        self.ui.next_exercise_button.clicked.connect(lambda state, grade=None: self.processGrade(grade, "Next"))
-        self.ui.prev_exercise_button.clicked.connect(lambda state, grade=None: self.processGrade(grade, "Prev"))
+        self.next_exercise_button.clicked.connect(lambda state, grade=None: self.processGrade(grade, "Next"))
+        self.prev_exercise_button.clicked.connect(lambda state, grade=None: self.processGrade(grade, "Prev"))
         self.sound_warning = QSoundEffect()
         self.sound_tick = QSoundEffect()
         self.sound_next = QSoundEffect()
@@ -56,16 +57,16 @@ class ExercisePage(Page):
         self.current_exercise_number = num
         self.exercises = exercises
         self.clearNotificationLayout()
-        self.ui.timer_ticker.setStyleSheet("color: white;\nfont: 12pt;")
-        self.disconnectWidget(self.ui.exit_practice_button)
-        self.ui.exit_practice_button.clicked.connect(lambda: self.exitPractice())
-        self.last_page_number = self.ui.content_pages.currentIndex()
+        self.timer_ticker.setStyleSheet("color: white;\nfont: 12pt;")
+        self.disconnectWidget(self.exit_practice_button)
+        self.exit_practice_button.clicked.connect(lambda: self.exitPractice())
+        self.last_page_number = self.content_pages.currentIndex()
         if self.last_page_number == self.learning_page.page_number:
             self.date_filter = self.learning_page.date_filter
         elif self.last_page_number == self.study_list_page.page_number:
             self.date_filter = self.study_list_page.date_filter
 
-        self.ui.content_pages.setCurrentIndex(self.page_number)
+        self.content_pages.setCurrentIndex(self.page_number)
         self.startExercise()
 
     def exitPractice(self):
@@ -88,13 +89,13 @@ class ExercisePage(Page):
             self.learning_page.selected_exercises = self.exercises
             self.learning_page.setExercisesButtons()
             self.learning_page.updateSectionList()
-            for i in range(self.ui.sections_listwidget.count()):
+            for i in range(self.learning_page.sections_listwidget.count()):
                 chap_num = self.learning_page.textbook_sections[i]["ChapterNumber"]
                 sect_num = self.learning_page.textbook_sections[i]["SectionNumber"]
                 exercises = [entry for entry in self.learning_page.textbook_exercises if entry["ChapterNumber"] == chap_num and entry["SectionNumber"] == sect_num]
                 num = int(exercises[0]["ExerciseID"].split(".")[-1])
-                self.ui.sections_listwidget.itemWidget(self.ui.sections_listwidget.item(i)).children()[-3].clicked.connect(lambda state, num=num, exercises=exercises: self.showPage(num, exercises))
-                self.ui.sections_listwidget.itemWidget(self.ui.sections_listwidget.item(i)).children()[-1].clicked.connect(lambda state, exercises_to_be_added=exercises: self.add_to_study_list_page.showPage(exercises_to_be_added))
+                self.learning_page.sections_listwidget.itemWidget(self.learning_page.sections_listwidget.item(i)).children()[-3].clicked.connect(lambda state, num=num, exercises=exercises: self.showPage(num, exercises))
+                self.learning_page.sections_listwidget.itemWidget(self.learning_page.sections_listwidget.item(i)).children()[-1].clicked.connect(lambda state, exercises_to_be_added=exercises: self.add_to_study_list_page.showPage(exercises_to_be_added))
             self.learning_page.prev_selected_exercise_num = None
             self.learning_page.prev_selected_exercise_bgcolor = None
         elif self.last_page_number == self.study_list_page.page_number:
@@ -103,20 +104,20 @@ class ExercisePage(Page):
             self.study_list_page.updateGradeDistribution()
             self.study_list_page.updateSLSectionList()
             progress_label = self.study_list_page.prev_study_list_item_widget.children()[7]
-            self.study_list_page.sl_chap_sects_list_element.updateProgressBar(progress_label, self.study_list_page.sl_collections_dict[self.study_list_page.selected_collection][self.study_list_page.selected_study_list])
-            for i in range(self.ui.sl_sections_listwidget.count()):
-                self.disconnectWidget(self.ui.sl_sections_listwidget.itemWidget(self.ui.sl_sections_listwidget.item(i)).children()[-2])
-                self.disconnectWidget(self.ui.sl_sections_listwidget.itemWidget(self.ui.sl_sections_listwidget.item(i)).children()[1])
-                self.ui.sl_sections_listwidget.itemWidget(self.ui.sl_sections_listwidget.item(i)).children()[-2].clicked.connect(lambda state, i=i: self.study_list_page.startButtonClicked(self.ui.sl_sections_listwidget.itemWidget(self.ui.sl_sections_listwidget.item(i))))
-                self.ui.sl_sections_listwidget.itemWidget(self.ui.sl_sections_listwidget.item(i)).children()[1].stateChanged.connect(lambda state, i=i: self.study_list_page.multipleSectionsSelected(self.ui.sl_sections_listwidget.itemWidget(self.ui.sl_sections_listwidget.item(i))))
+            self.study_list_page.sl_sections_listwidget.updateProgressBar(progress_label, self.study_list_page.sl_collections_dict[self.study_list_page.selected_collection][self.study_list_page.selected_study_list])
+            for i in range(self.study_list_page.sl_sections_listwidget.count()):
+                self.disconnectWidget(self.study_list_page.sl_sections_listwidget.itemWidget(self.study_list_page.sl_sections_listwidget.item(i)).children()[-2])
+                self.disconnectWidget(self.study_list_page.sl_sections_listwidget.itemWidget(self.study_list_page.sl_sections_listwidget.item(i)).children()[1])
+                self.study_list_page.sl_sections_listwidget.itemWidget(self.study_list_page.sl_sections_listwidget.item(i)).children()[-2].clicked.connect(lambda state, i=i: self.study_list_page.startButtonClicked(self.study_list_page.sl_sections_listwidget.itemWidget(self.study_list_page.sl_sections_listwidget.item(i))))
+                self.study_list_page.sl_sections_listwidget.itemWidget(self.study_list_page.sl_sections_listwidget.item(i)).children()[1].stateChanged.connect(lambda state, i=i: self.study_list_page.multipleSectionsSelected(self.study_list_page.sl_sections_listwidget.itemWidget(self.study_list_page.sl_sections_listwidget.item(i))))
             self.study_list_page.prev_selected_exercise_num = None
             self.study_list_page.prev_selected_exercise_bgcolor = None
-        self.ui.content_pages.setCurrentIndex(self.last_page_number)
+        self.content_pages.setCurrentIndex(self.last_page_number)
         return
 
     def clearNotificationLayout(self):
-        for i in reversed(range(self.ui.popup_note_layout.count())):
-            self.ui.popup_note_layout.itemAt(i).widget().setParent(None)
+        for i in reversed(range(self.popup_note_layout.count())):
+            self.popup_note_layout.itemAt(i).widget().setParent(None)
 
     def showNotification(self, notif_str):
         try:
@@ -138,7 +139,7 @@ class ExercisePage(Page):
         self.op_level = 0.8
         self.opacity_effect.setOpacity(self.op_level)
         self.popup_label.setGraphicsEffect(self.opacity_effect)
-        self.ui.popup_note_layout.addWidget(self.popup_label)
+        self.popup_note_layout.addWidget(self.popup_label)
         self.start_hide_timer.singleShot(3000, self.hideNotification)
 
     def hideNotification(self):
@@ -158,12 +159,12 @@ class ExercisePage(Page):
 
     def updateTimerTicker(self):
         self.timer_counter = self.timer_counter - 1
-        self.ui.timer_ticker.setText(str((datetime(1, 1, 1, 0, 0) + timedelta(seconds=self.timer_counter)).strftime("%M:%S")))
+        self.timer_ticker.setText(str((datetime(1, 1, 1, 0, 0) + timedelta(seconds=self.timer_counter)).strftime("%M:%S")))
         if self.timer_counter == self.WARNING_TIME:
             self.sound_warning.play()
             self.showNotification("Two Minutes Left!")
         if self.timer_counter <= self.WARNING_TIME:
-            self.ui.timer_ticker.setStyleSheet("color: red;\nfont: 12pt;")
+            self.timer_ticker.setStyleSheet("color: red;\nfont: 12pt;")
         if 0 < self.timer_counter < 10:
             self.sound_tick.play()
         if self.timer_counter == 0:
@@ -178,22 +179,22 @@ class ExercisePage(Page):
                 self.exercise_timer.disconnect()
         except:
             pass
-        self.ui.timer_ticker.setText(str((datetime(1, 1, 1, 0, 0) + timedelta(seconds=self.MAX_TIME)).strftime("%M:%S")))
-        self.ui.timer_ticker.setStyleSheet("color: white;\nfont: 12pt;")
-        self.ui.problem_pic_label.clear()
-        self.ui.solution_pic_label.clear()
-        for i in reversed(range(self.ui.grade_hboxlayout.count())):
-            self.ui.grade_hboxlayout.itemAt(i).widget().setParent(None)
+        self.timer_ticker.setText(str((datetime(1, 1, 1, 0, 0) + timedelta(seconds=self.MAX_TIME)).strftime("%M:%S")))
+        self.timer_ticker.setStyleSheet("color: white;\nfont: 12pt;")
+        self.problem_pic_label.clear()
+        self.solution_pic_label.clear()
+        for i in reversed(range(self.grade_hboxlayout.count())):
+            self.grade_hboxlayout.itemAt(i).widget().setParent(None)
         self.current_exercise = [entry for entry in self.exercises if int(entry["ExerciseID"].split(".")[-1]) == self.current_exercise_number][0]
         exercise_path = os.path.join(Config.E_PACKS_DIR, "\\".join(self.current_exercise["UnmaskedExercisePath"].split(" -- ")))
         problem_pic_label = QPixmap(exercise_path)
-        self.ui.problem_pic_label.setPixmap(problem_pic_label)
-        self.ui.problem_pic_label.resize(problem_pic_label.width(), problem_pic_label.height())
-        self.ui.problem_pic_scroll_area.verticalScrollBar().setValue(0)
+        self.problem_pic_label.setPixmap(problem_pic_label)
+        self.problem_pic_label.resize(problem_pic_label.width(), problem_pic_label.height())
+        self.problem_pic_scroll_area.verticalScrollBar().setValue(0)
         button = QPushButton("Finish")
         button.resize(50, 50)
         button.clicked.connect(lambda state: self.finishedExercise())
-        self.ui.grade_hboxlayout.addWidget(button)
+        self.grade_hboxlayout.addWidget(button)
         self.setExercisesButtons()
         self.timer_counter = self.MAX_TIME
         self.exercise_timer.start(1000)
@@ -203,14 +204,14 @@ class ExercisePage(Page):
         self.exercise_timer.disconnect()
         solution_path = os.path.join(Config.E_PACKS_DIR, "\\".join(self.current_exercise["SolutionPath"].split(" -- ")))
         solution_image_pixmap = QPixmap(solution_path)
-        self.ui.solution_pic_label.setPixmap(solution_image_pixmap)
-        self.ui.solution_pic_label.resize(solution_image_pixmap.width(), solution_image_pixmap.height())
-        self.ui.grade_hboxlayout.itemAt(0).widget().setParent(None)
+        self.solution_pic_label.setPixmap(solution_image_pixmap)
+        self.solution_pic_label.resize(solution_image_pixmap.width(), solution_image_pixmap.height())
+        self.grade_hboxlayout.itemAt(0).widget().setParent(None)
         for grade in Config.EXERCISE_GRADE_COLORS.keys():
             button = QPushButton(grade)
             button.setStyleSheet("background-color : rgb" + str(Config.EXERCISE_GRADE_COLORS[grade]))
             button.clicked.connect(lambda state, grade=button.text(): self.processGrade(grade, "Next"))
-            self.ui.grade_hboxlayout.addWidget(button)
+            self.grade_hboxlayout.addWidget(button)
 
 
     def processGrade(self, grade, direction, desired_next_num=None):
@@ -279,8 +280,8 @@ class ExercisePage(Page):
 
 
     def clearExercisesGrid(self):
-        for i in reversed(range(self.ui.exercise_page_exercises_grid.count())):
-            self.ui.exercise_page_exercises_grid.itemAt(i).widget().setParent(None)
+        for i in reversed(range(self.exercises_grid.count())):
+            self.exercises_grid.itemAt(i).widget().setParent(None)
 
     def setExercisesButtons(self):
         self.clearExercisesGrid()
@@ -327,7 +328,7 @@ class ExercisePage(Page):
                         button.toggle()
                         button.setEnabled(False)
                     button.setStyleSheet("background-color : " + color)
-                    self.ui.exercise_page_exercises_grid.addWidget(button, i, j)
+                    self.exercises_grid.addWidget(button, i, j)
         else:
             label = QLabel("\n\n\n\n\nNo Exercises!")
             color = "white"
@@ -335,6 +336,6 @@ class ExercisePage(Page):
             label.setAlignment(QtCore.Qt.AlignCenter)
             label.setFont(QFont("Arial", 12))
             label.resize(60, 30)
-            self.ui.exercise_page_exercises_grid.addWidget(label, 0, 0)
+            self.exercises_grid.addWidget(label, 0, 0)
 
 

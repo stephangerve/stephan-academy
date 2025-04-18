@@ -8,7 +8,6 @@ from ClassMainWindow import MainWindow
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    #app.setStyle(QtWidgets.QStyleFactory.create('Fusion'))
     window = MainWindow()
     sys.exit(app.exec_())
 

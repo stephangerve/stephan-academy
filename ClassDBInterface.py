@@ -222,11 +222,39 @@ class DBInterface():
                             "WHERE TextbookID = '" + parameters[6] + "' "
                             "AND ExerciseID = '" + parameters[7] + "' "
                     )
+            elif table_name == "Flashcard":
+                if parameters[4] is not None and parameters[4] != 'None':
+                    query = (
+                        "UPDATE flashcards "
+                        "SET Seen = '" + parameters[0] + "', "
+                        "Attempts = " + str(parameters[1]) + ", "
+                        "LastAttempted = '" + parameters[2] + "', "
+                        "LastAttemptTime = '" + parameters[3] + "', "
+                        "Grade = '" + parameters[4] + "', "
+                        "AverageTime = " + str(parameters[5]) + " "
+                        "WHERE CollectionID = '" + parameters[6] + "' "
+                        "AND SetID = '" + parameters[7] + "' "
+                        "AND FlashcardNumber = '" + parameters[8] + "' "
+                    )
+                else:
+                    query = (
+                            "UPDATE flashcards "
+                            "SET Seen = '" + parameters[0] + "' "
+                            "WHERE CollectionID = '" + parameters[6] + "' "
+                            "AND SetID = '" + parameters[7] + "' "
+                            "AND FlashcardNumber = '" + parameters[8] + "' "
+                    )
         elif operation == "Insert":
-            if table_name == "Flashcard Collection":
+            if table_name == "Study List Collection":
+                query = (
+                    "INSERT INTO study_list_collections "
+                    "(CollectionID, CollectionName, Tags)"
+                    "VALUES (%s, %s, %s)"
+                )
+            elif table_name == "Flashcard Collection":
                 query = (
                     "INSERT INTO flashcard_collections "
-                    "(CollectionID, TextbookID, CreationDate)"
+                    "(CollectionID, TextbookID, CreationDate) "
                     "VALUES (%s, %s, %s)"
                 )
             elif table_name == "Flashcard Set":
@@ -238,7 +266,7 @@ class DBInterface():
             elif table_name == "New Flashcard":
                 query = (
                     "INSERT INTO flashcards "
-                    "(CollectionID, SetID, FlashcardID, CreationDate, LastEdited, Seen, Attempts, LastAttempted, AttemptTime, Grade, AverageTime, NextAttemptDate)"
+                    "(CollectionID, SetID, FlashcardNumber, CreationDate, LastEdited, Seen, Attempts, LastAttempted, LastAttemptTime, Grade, AverageTime, NextAttemptDate)"
                     "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
                 )
             elif table_name == "New Exercise":

@@ -3,6 +3,8 @@ from PyQt5.QtWidgets import QGraphicsDropShadowEffect
 from PyQt5.QtGui import QColor
 from PyQt5 import QtCore
 
+def removeShadow(object):
+    object.setGraphicsEffect(None)
 
 def regularShadow(object):
     shadow = QGraphicsDropShadowEffect()

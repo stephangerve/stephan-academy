@@ -140,7 +140,10 @@ class ScrollAreaWidget():
             hboxLayout.addWidget(label)
 
             label = QLabel()
-            label.setText(str(len(entry["Tags"].split(","))))
+            if entry["Tags"] != None:
+                label.setText(str(len(entry["Tags"].split(","))))
+            else:
+                label.setText(str(0))
             label.setStyleSheet("color: #4e5256")
             hboxLayout.addWidget(label)
 

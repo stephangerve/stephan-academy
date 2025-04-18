@@ -1,7 +1,7 @@
+from PyQt5 import uic
 import ElementStyles
 from ContentPages.ClassPage import Page
 from ClassDBInterface import DBInterface
-from CustomWidgets.ClassListWidget import ListWidget
 from PyQt5 import QtCore
 from PyQt5.QtWidgets import QPushButton, QLabel, QHBoxLayout, QWidget, QFrame, QVBoxLayout
 from PyQt5.QtGui import QFont, QPixmap, QCursor
@@ -15,15 +15,15 @@ learning_system_dir = os.path.join(main_dir, "Learning System")
 e_packs_dir = os.path.join(main_dir, "Exercise Packs")
 
 class CategoryPage(Page):
-    ui = None
     exercises = None
     exercise_stats = None
 
 
 
-    def __init__(self, ui):
+    def __init__(self, content_pages):
         Page.__init__(self, Config.CategoryPage_page_number)
-        self.ui = ui
+        uic.loadUi('Resources/UI/categories_page.ui', self)
+        self.content_pages = content_pages
         self.initUI()
 
 
@@ -37,20 +37,7 @@ class CategoryPage(Page):
         self.setCategoryGrid()
 
     def showPage(self):
-        self.ui.button_learn.setChecked(True)
-        self.ui.button_learn.setEnabled(False)
-        self.ui.button_learn.setStyleSheet("background-color: rgb(58, 74, 97); color: white")
-        self.ui.button_learn.setCursor(QCursor(QtCore.Qt.ArrowCursor))
-        pushbuttons = [self.ui.button_dashboard, self.ui.button_studylist, self.ui.button_flashcards]
-        for button in pushbuttons:
-            if button.isChecked():
-                button.setChecked(False)
-                button.setEnabled(True)
-                button.setStyleSheet("background-color: #2A4D87; color: white")
-                button.setCursor(QCursor(QtCore.Qt.PointingHandCursor))
-        self.ui.textbooks_listwidget.itemClicked.connect(lambda: None)
-        self.ui.sections_listwidget.itemClicked.connect(lambda: None)
-        self.ui.content_pages.setCurrentIndex(self.page_number)
+        self.content_pages.setCurrentIndex(self.page_number)
 
     def setCategoryGrid(self):
         count = len(self.categories)
@@ -82,6 +69,6 @@ class CategoryPage(Page):
                 ElementStyles.regularShadow(frame)
                 ElementStyles.hoverEffect(frame)
                 button.clicked.connect(lambda state, cat_str=button.text(): self.learning_page.showPage(cat_str))
-                self.ui.cat_grid.addWidget(frame, i, j)
+                self.cat_grid.addWidget(frame, i, j)
 
 
