@@ -1,7 +1,26 @@
-# Stephan Academy
-## A desktop learning platform to aid student's self-study in mathematics and science.
+# Stephan Academy: A desktop learning platform to aid student's self-study in mathematics and science.
+
+
+
+## Software Requirements
+
+---
+
+- Python 3
+  - PyQT5
+  - numpy
+  - pillow
+  - time
+  - mysql.connecor
+  - CV2
+  - Keyboard
+  - mss.tools
+- MySQL
 
 ## Tutorial
+
+---- 
+
 
 ### Subjects Page
 ![](Screenshot_2025-04-18_091421.png)
